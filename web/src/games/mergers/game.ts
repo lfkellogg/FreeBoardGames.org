@@ -28,7 +28,7 @@ function setupPlayers(numPlayers: number): Record<string, Player> {
   for (let i = 0; i < numPlayers; i++) {
     const id = `${i}`;
     players[id] = {
-      id: id,
+      id,
       money: 6000,
       stocks: {
         Tower: 0,
@@ -130,7 +130,9 @@ function chooseNewChain(G: IG, ctx: Ctx, chain: Chain) {
 
 function gameCanBeDeclaredOver(G: IG) {
   const chainSizes = Object.keys(Chain).map(key => sizeOfChain(Chain[key], G.hotels));
-  if (chainSizes.filter(s => s > 0) == chainSizes.filter(s => s > 10)) {
+  const chainsOnBoard = chainSizes.filter(s => s > 0).length;
+  const unmergeableChains = chainSizes.filter(s => s > 10).length;
+  if (chainsOnBoard > 0 && chainsOnBoard === unmergeableChains) {
     return true;
   } else if (chainSizes.find(s => s > 40)) {
     return true;
@@ -139,37 +141,41 @@ function gameCanBeDeclaredOver(G: IG) {
 }
 
 function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
-  const player = G.players[ctx.playOrderPos];
-  let purchasesRemaining = 3;
-  for (let key in Object.keys(Chain)) {
-    const chain = Chain[key];
-    const num = order[chain];
-    if (!num) {
-      continue;
-    }
-    if (!G.hotels.flat().find(h => h.chain === chain)) {
-      continue;
-    }
-    const stockPrice = priceOfStock(chain, G.hotels);
-    let stocksToBuy = Math.min(num, Math.min(G.availableStocks[chain], purchasesRemaining));
-    while (stocksToBuy > 0 && player.money >= stockPrice) {
-      player.stocks[chain]++;
-      player.money -= stockPrice;
-      G.availableStocks[chain]--;
-      stocksToBuy--;
-      purchasesRemaining--;
-    }
+  if (order) {
+    const player = G.players[ctx.playOrderPos];
+    let purchasesRemaining = 3;
+    Object.keys(Chain).forEach(key => {
+      const chain = Chain[key];
+      const num = order[chain];
+      if (!num) {
+        return;
+      }
+      if (!G.hotels.flat().find(h => h.chain === chain)) {
+        return;
+      }
+      const stockPrice = priceOfStock(chain, G.hotels);
+      let stocksToBuy = Math.min(num, Math.min(G.availableStocks[chain], purchasesRemaining));
+      while (stocksToBuy > 0 && player.money >= stockPrice) {
+        player.stocks[chain]++;
+        player.money -= stockPrice;
+        G.availableStocks[chain]--;
+        stocksToBuy--;
+        purchasesRemaining--;
+      }
+    });
   }
 
   if (gameCanBeDeclaredOver(G)) {
     ctx.events.setStage('declareGameOverStage');
   } else {
+    ctx.events.endStage();
     ctx.events.endTurn();
   }
 }
 
 function assignRandomHotel(G: IG, ctx: Ctx, player: Player): Hotel | undefined {
   const undrawnHotels = G.hotels.flat().filter(h => !h.drawnByPlayer && !h.isUnplayable);
+  console.log('ctx', ctx);
   if (undrawnHotels.length > 0) {
     const randomHotel = undrawnHotels[Math.floor(ctx.random.Number() * undrawnHotels.length)];
     randomHotel.drawnByPlayer = player.id;
@@ -184,7 +190,10 @@ function firstBuildTurn(G: IG, ctx: Ctx): number {
     return ctx.playOrder.indexOf(G.lastPlacedHotel.drawnByPlayer);
   } else {
     // otherwise choose first player based on initial hotel placement (closest to top left)
-    return ctx.playOrder.indexOf(G.hotels.flat().find(h => h.hasBeenPlaced).drawnByPlayer);
+    const allHotels = G.hotels.flat();
+    allHotels.sort((a, b) => a.row - b.row);
+    allHotels.sort((a, b) => a.column - b.column);
+    return ctx.playOrder.indexOf(allHotels.find(h => h.hasBeenPlaced).drawnByPlayer);
   }
 }
 
@@ -236,6 +245,7 @@ function declareGameOver(G: IG, ctx: Ctx, isGameOver: boolean) {
   if (isGameOver) {
     ctx.events.endGame();
   }
+  ctx.events.endStage();
   ctx.events.endTurn();
 }
 
@@ -271,11 +281,11 @@ export const MergersGame: Game<IG> = {
   name: 'mergers',
 
   setup: (ctx: Ctx) => {
-    console.log('settin up!');
-    let hotels = setupHotels();
+    console.log('Setting up!');
+    const hotels = setupHotels();
 
-    let G: IG = {
-      hotels: hotels,
+    const G: IG = {
+      hotels,
       players: setupPlayers(ctx.numPlayers),
       availableStocks: setupAvailableStocks(),
     };
@@ -292,8 +302,6 @@ export const MergersGame: Game<IG> = {
         assignRandomHotel(G, ctx, player);
       }
     }
-
-    console.log('G', G);
 
     ctx.events.setPhase('buildingPhase');
 
@@ -336,6 +344,16 @@ export const MergersGame: Game<IG> = {
           next: (G: IG, ctx: Ctx) => (ctx.playOrderPos + 1) % ctx.numPlayers,
         },
 
+        // onBegin: (G: IG, ctx: Ctx) => {
+        //   console.log('starting turn for player: ', ctx.currentPlayer);
+        //   console.log('activePlayers: ', ctx.activePlayers);
+        //   ctx.events.setStage('placeHotelStage');
+        //   console.log('activePlayers (after set stage): ', ctx.activePlayers);
+        // },
+
+        activePlayers: { currentPlayer: 'placeHotelStage' },
+
+        // TODO: ctx here seems to have 'random' set to undefined
         onEnd: (G: IG, ctx: Ctx) => {
           // find and mark any unplayable tiles, and replace if they have been drawn
           G.hotels.flat().filter(h => isUnplayable(G, h)).forEach(h => {
@@ -345,6 +363,13 @@ export const MergersGame: Game<IG> = {
               assignRandomHotel(G, ctx, player);
               player.hotels = player.hotels.filter(h2 => h2.id !== h.id);
               h.drawnByPlayer = undefined;
+            }
+          });
+
+          // give all players tiles until they have 6
+          ctx.playOrder.forEach(playerId => {
+            while (G.players[playerId].hotels.length < 6) {
+              assignRandomHotel(G, ctx, G.players[playerId]);
             }
           });
         },
@@ -368,7 +393,7 @@ export const MergersGame: Game<IG> = {
       },
 
       onBegin: (G: IG, ctx: Ctx) => {
-        console.log('in building phase');
+        console.log('starting buildingPhase');
         // if returning from a merger phase, we're now in the buy stock stage
         if (G.lastPlacedHotel) {
           absorbNewHotels(G);

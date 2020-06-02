@@ -26,6 +26,7 @@ export class Board extends React.Component<IBoardProps, {}> {
     };
     return (
       <td
+        key={hotel.id}
         style={style}
         onClick={() => this.props.moves.placeHotel(hotel.id)}
       >
@@ -33,9 +34,9 @@ export class Board extends React.Component<IBoardProps, {}> {
       </td>
     );
   }
-  renderHotelRow(row: Hotel[]) {
+  renderHotelRow(row: Hotel[], i: number) {
     return (
-      <tr>
+      <tr key={`hotel-row-${i}`}>
         {row.map(this.renderHotel)}
       </tr>
     );
@@ -43,12 +44,15 @@ export class Board extends React.Component<IBoardProps, {}> {
   renderHotels() {
     return (
       <table>
-        {this.props.G.hotels.map(this.renderHotelRow)}
+        <tbody>
+          {this.props.G.hotels.map(this.renderHotelRow)}
+        </tbody>
       </table>
     );
   }
   render() {
     console.log('rendering with props', this.props);
+    console.log('activePlayers', this.props.ctx.activePlayers);
     return (
       <GameLayout
         gameArgs={this.props.gameArgs}>
