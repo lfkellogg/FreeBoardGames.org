@@ -1,8 +1,8 @@
 export interface IG {
   // TODO: change this to { 'A1': Hotel } ?
-  hotels: Hotel[][];
-  players: Record<string, Player>;
-  availableStocks: Record<Chain, number>;
+  hotels?: Hotel[][];
+  players?: Record<string, Player>;
+  availableStocks?: Partial<Record<Chain, number>>;
   lastPlacedHotel?: string;
   survivingChain?: Chain;
   chainToMerge?: Chain;
@@ -20,7 +20,7 @@ export enum Chain {
 }
 
 export interface Hotel {
-  id: string;
+  id?: string;
   hasBeenPlaced?: boolean;
   isUnplayable?: boolean;
   drawnByPlayer?: string;
@@ -28,8 +28,14 @@ export interface Hotel {
 }
 
 export interface Player {
-  id: string;
-  money: number;
-  stocks: Record<Chain, number>;
-  hotels: Hotel[];
+  id?: string;
+  money?: number;
+  stocks?: Partial<Record<Chain, number>>;
+  hotels?: Hotel[];
+}
+
+export interface Score {
+  id?: string,
+  money?: number,
+  winner?: boolean,
 }

@@ -139,11 +139,11 @@ export function playersInMinority(G: IG, chain: Chain): Player[] {
 }
 
 export function majorityBonus(G: IG, chain: Chain): number {
-  return priceOfStock(chain, G.hotels) * 5;
+  return priceOfStock(chain, G.hotels) * 10;
 }
 
 export function minorityBonus(G: IG, chain: Chain): number {
-  return priceOfStock(chain, G.hotels) * 10;
+  return priceOfStock(chain, G.hotels) * 5;
 }
 
 export function roundToNearest100(x: number): number {

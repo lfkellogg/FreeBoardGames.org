@@ -2,9 +2,9 @@ import { Ctx } from 'boardgame.io';
 import { Client } from 'boardgame.io/client';
 import { INVALID_MOVE } from 'boardgame.io/core';
 import { Local } from 'boardgame.io/multiplayer';
-import { assignHotelToPlayer, MergersGame, moveHotelToBoard } from './game';
-import { Chain, Hotel, IG } from './types';
-import { getHotel, setupPlayers, setupAvailableStocks } from './utils';
+import { assignHotelToPlayer, autosetChainToMerge, awardBonuses, chooseChainToMerge, chooseSurvivingChain, MergersGame, moveHotelToBoard } from './game';
+import { Chain, Hotel, IG, Player } from './types';
+import { getHotel, setupPlayers, setupAvailableStocks, playersInDescOrderOfStock, playersInMajority, playersInMinority } from './utils';
 
 // TODO:
 // - test mergers
@@ -162,6 +162,7 @@ describe('chooseNewChain', () => {
         { id: '1-A', hasBeenPlaced: true },
         { id: '2-A', drawnByPlayer: '0' },
         { id: '3-A', hasBeenPlaced: true },
+        { id: '4-A', hasBeenPlaced: true },
       ],
     ];
     client = getTestClient(2, originalBoard);
@@ -176,6 +177,7 @@ describe('chooseNewChain', () => {
         { id: '1-A', hasBeenPlaced: true, chain: Chain.American },
         { id: '2-A', hasBeenPlaced: true, chain: Chain.American, drawnByPlayer: '0' },
         { id: '3-A', hasBeenPlaced: true, chain: Chain.American },
+        { id: '4-A', hasBeenPlaced: true, chain: Chain.American },
       ],
     ]);
   });
@@ -184,6 +186,220 @@ describe('chooseNewChain', () => {
     client.moves.chooseNewChain(Chain.American);
 
     expect(client.store.getState().G.players['0'].stocks[Chain.American]).toEqual(1);
+  });
+});
+
+describe('playersInDescOrderOfStock', () => {
+  it('should sort by the given chain', () => {
+    const player0 = { stocks: { [Chain.Tower]: 3, [Chain.American]: 1 } };
+    const player1 = { stocks: { [Chain.Tower]: 4, [Chain.American]: 2 } };
+    const player2 = { stocks: { [Chain.Tower]: 1, [Chain.American]: 3 } };
+    const G: IG = { players: { '0': player0, '1': player1, '2': player2 } };
+    const result = playersInDescOrderOfStock(G, Chain.Tower);
+    expect(result).toEqual([player1, player0, player2]);
+  });
+});
+
+describe('playersInMajority', () => {
+  it('chooses a single player majority', () => {
+    const player0 = { stocks: { [Chain.Tower]: 3 } };
+    const player1 = { stocks: { [Chain.Tower]: 4 } };
+    const player2 = { stocks: { [Chain.Tower]: 1 } };
+    const G: IG = { players: { '0': player0, '1': player1, '2': player2 } };
+    const result = playersInMajority(G, Chain.Tower);
+    expect(result).toEqual([player1]);
+  });
+  it('chooses a multiple player majority', () => {
+    const player0 = { stocks: { [Chain.Tower]: 3 } };
+    const player1 = { stocks: { [Chain.Tower]: 3 } };
+    const player2 = { stocks: { [Chain.Tower]: 3 } };
+    const G: IG = { players: { '0': player0, '1': player1, '2': player2 } };
+    const result = playersInMajority(G, Chain.Tower);
+    expect(result).toEqual([player0, player1, player2]);
+  });
+  it('chooses an empty majority', () => {
+    const player0 = { stocks: { [Chain.Tower]: 0 } };
+    const player1 = { stocks: { [Chain.Tower]: 0 } };
+    const player2 = { stocks: { [Chain.Tower]: 0 } };
+    const G: IG = { players: { '0': player0, '1': player1, '2': player2 } };
+    const result = playersInMajority(G, Chain.Tower);
+    expect(result).toEqual([]);
+  });
+});
+
+describe('playersInMinority', () => {
+  it('chooses the second place player', () => {
+    const player0 = { stocks: { [Chain.Tower]: 3 } };
+    const player1 = { stocks: { [Chain.Tower]: 4 } };
+    const player2 = { stocks: { [Chain.Tower]: 1 } };
+    const G: IG = { players: { '0': player0, '1': player1, '2': player2 } };
+    const result = playersInMinority(G, Chain.Tower);
+    expect(result).toEqual([player0]);
+  });
+  it('chooses a multiple player minority', () => {
+    const player0 = { stocks: { [Chain.Tower]: 3 } };
+    const player1 = { stocks: { [Chain.Tower]: 4 } };
+    const player2 = { stocks: { [Chain.Tower]: 3 } };
+    const G: IG = { players: { '0': player0, '1': player1, '2': player2 } };
+    const result = playersInMinority(G, Chain.Tower);
+    expect(result).toEqual([player0, player2]);
+  });
+  it('chooses an empty minority when only one player has stocks', () => {
+    const player0 = { stocks: { [Chain.Tower]: 0 } };
+    const player1 = { stocks: { [Chain.Tower]: 4 } };
+    const player2 = { stocks: { [Chain.Tower]: 0 } };
+    const G: IG = { players: { '0': player0, '1': player1, '2': player2 } };
+    const result = playersInMinority(G, Chain.Tower);
+    expect(result).toEqual([]);
+  });
+  it('chooses an empty minority when multiple players with the only stock are tied', () => {
+    const player0 = { stocks: { [Chain.Tower]: 0 } };
+    const player1 = { stocks: { [Chain.Tower]: 4 } };
+    const player2 = { stocks: { [Chain.Tower]: 4 } };
+    const G: IG = { players: { '0': player0, '1': player1, '2': player2 } };
+    const result = playersInMinority(G, Chain.Tower);
+    expect(result).toEqual([]);
+  });
+  it('chooses an empty minority when no one has stock', () => {
+    const player0 = { stocks: { [Chain.Tower]: 0 } };
+    const player1 = { stocks: { [Chain.Tower]: 0 } };
+    const player2 = { stocks: { [Chain.Tower]: 0 } };
+    const G: IG = { players: { '0': player0, '1': player1, '2': player2 } };
+    const result = playersInMinority(G, Chain.Tower);
+    expect(result).toEqual([]);
+  });
+});
+
+describe('awardBonuses', () => {
+  it('awards a single player majority and minority', () => {
+    const player0 = { stocks: { [Chain.Tower]: 3 }, money: 6000 };
+    const player1 = { stocks: { [Chain.Tower]: 4 }, money: 6000 };
+    const player2 = { stocks: { [Chain.Tower]: 1 }, money: 6000 };
+
+    // size of chain = 3 => stock price = 300, majority = 3000, minority = 1500
+    const hotels = [
+      [{ chain: Chain.Tower }, { chain: Chain.Tower }],
+      [{ chain: Chain.Tower }, { chain: Chain.American }]
+    ];
+
+    const G: IG = {
+      players: { '0': player0, '1': player1, '2': player2 },
+      hotels
+    };
+
+    awardBonuses(G, Chain.Tower);
+
+    expect(G).toEqual({
+      players: {
+        '0': { ...player0, money: 7500 },
+        '1': { ...player1, money: 9000 },
+        '2': { ...player2, money: 6000 },
+      },
+      hotels,
+    });
+  });
+});
+
+describe('chooseSurvivingChain', () => {
+  it('sets survivingChain and removes it from the mergingChains', () => {
+    const hotels = [
+      [{ chain: Chain.Tower }, { chain: Chain.Tower }],
+      [{ chain: Chain.Continental }, { chain: undefined }],
+      [{ chain: Chain.Continental }, { chain: Chain.American }],
+    ];
+    const G: IG = {
+      mergingChains: [Chain.Tower, Chain.Continental, Chain.American],
+      hotels,
+    };
+    const result = chooseSurvivingChain(G, {}, Chain.Continental);
+    expect(G.survivingChain).toEqual(Chain.Continental);
+    expect(G.mergingChains).toEqual([Chain.Tower, Chain.American]);
+    expect(result).not.toEqual(INVALID_MOVE);
+  });
+
+  it('only allows one of the largest chains to be selected', () => {
+    const hotels = [
+      [{ chain: Chain.Tower }, { chain: Chain.Tower }],
+      [{ chain: Chain.Continental }, { chain: undefined }],
+      [{ chain: Chain.Continental }, { chain: Chain.American }],
+    ];
+    const G: IG = {
+      mergingChains: [Chain.Tower, Chain.Continental, Chain.American],
+      hotels,
+    };
+    const result = chooseSurvivingChain(G, {}, Chain.American);
+    expect(result).toEqual(INVALID_MOVE);
+  });
+});
+
+describe('chooseChainToMerge', () => {
+  it('sets chainToMerge and re-sorts mergingChains', () => {
+    const hotels = [
+      [{ chain: Chain.Tower }, { chain: Chain.Tower }],
+      [{ chain: Chain.Continental }, { chain: Chain.American }],
+      [{ chain: Chain.Continental }, { chain: Chain.American }],
+      [{ chain: Chain.Festival }, { chain: Chain.Festival }],
+    ];
+    const G: IG = {
+      survivingChain: Chain.Tower,
+      mergingChains: [Chain.Festival, Chain.American, Chain.Continental],
+      hotels,
+    };
+    const result = chooseChainToMerge(G, {}, Chain.Continental);
+    expect(G.chainToMerge).toEqual(Chain.Continental);
+    expect(G.mergingChains).toEqual([Chain.Continental, Chain.Festival, Chain.American]);
+    expect(result).not.toEqual(INVALID_MOVE);
+  });
+});
+
+describe('autosetChainToMerge', () => {
+  it('does nothing if chainToMerge is set', () => {
+    const hotels = [
+      [{ chain: Chain.Tower }, { chain: Chain.Tower }],
+      [{ chain: Chain.Tower }, { chain: Chain.Continental }],
+      [{ chain: Chain.Continental }, { chain: Chain.American }],
+    ];
+    const G: IG = {
+      chainToMerge: Chain.American, // would be disallowed, but illustrates this test
+      survivingChain: Chain.Tower,
+      mergingChains: [Chain.American, Chain.Continental],
+      hotels,
+    };
+    autosetChainToMerge(G);
+    expect(G.chainToMerge).toEqual(Chain.American);
+    expect(G.mergingChains).toEqual([Chain.American, Chain.Continental]);
+  });
+
+  it('chooses the next largest chain', () => {
+    const hotels = [
+      [{ chain: Chain.Tower }, { chain: Chain.Tower }],
+      [{ chain: Chain.Continental }, { chain: undefined }],
+      [{ chain: Chain.Continental }, { chain: Chain.American }],
+    ];
+    const G: IG = {
+      survivingChain: Chain.Tower,
+      mergingChains: [Chain.Continental, Chain.American],
+      hotels,
+    };
+    autosetChainToMerge(G);
+    expect(G.chainToMerge).toEqual(Chain.Continental);
+    expect(G.mergingChains).toEqual([Chain.Continental, Chain.American]);
+  });
+
+  it('choose nothing if there is a tie', () => {
+    const hotels = [
+      [{ chain: Chain.Tower }, { chain: Chain.Tower }],
+      [{ chain: Chain.Continental }, { chain: Chain.American }],
+      [{ chain: Chain.Continental }, { chain: Chain.American }],
+    ];
+    const G: IG = {
+      survivingChain: Chain.Tower,
+      mergingChains: [Chain.American, Chain.Continental],
+      hotels,
+    };
+    autosetChainToMerge(G);
+    expect(G.chainToMerge).toBeUndefined();
+    expect(G.mergingChains).toEqual([Chain.American, Chain.Continental]);
   });
 });
 // it('should declare player 1 as the winner', () => {

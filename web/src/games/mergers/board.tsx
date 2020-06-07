@@ -2,7 +2,7 @@ import * as React from 'react';
 import { IGameArgs } from '../../components/App/Game/GameBoardWrapper';
 import { GameLayout } from '../../components/App/Game/GameLayout';
 import { Ctx } from 'boardgame.io';
-import { Hotel, IG } from './types';
+import { Chain, Hotel, IG } from './types';
 
 interface IBoardProps {
   G: IG;
@@ -19,9 +19,34 @@ export class Board extends React.Component<IBoardProps, {}> {
     this.renderHotelRow = this.renderHotelRow.bind(this);
     this.renderHotels = this.renderHotels.bind(this);
   }
+  getBackGroundColor(hotel: Hotel) {
+    if (!hotel.hasBeenPlaced) {
+      return hotel.drawnByPlayer === this.props.ctx.currentPlayer ? 'lightgray' : 'white';
+    }
+
+    if (!hotel.chain) {
+      return 'gray';
+    }
+
+    if (hotel.chain === Chain.Tower) {
+      return 'red';
+    } else if (hotel.chain === Chain.Luxor) {
+      return 'yellow';
+    } else if (hotel.chain === Chain.American) {
+      return 'blue';
+    } else if (hotel.chain === Chain.Festival) {
+      return 'forestgreen';
+    } else if (hotel.chain === Chain.Worldwide) {
+      return 'brown';
+    } else if (hotel.chain === Chain.Continental) {
+      return 'teal';
+    } else if (hotel.chain === Chain.Imperial) {
+      return 'deeppink';
+    }
+  }
   renderHotel(hotel: Hotel) {
     const style = {
-      backgroundColor: hotel.hasBeenPlaced ? 'green' : hotel.drawnByPlayer === this.props.ctx.currentPlayer ? 'yellow' : 'white',
+      backgroundColor: this.getBackGroundColor(hotel),
       color: 'black',
     };
     return (
