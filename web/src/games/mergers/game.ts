@@ -1,7 +1,7 @@
 import { INVALID_MOVE, TurnOrder } from 'boardgame.io/core';
 import { Game, Ctx, } from 'boardgame.io';
 import { Chain, Hotel, Player, IG } from './types';
-import { adjacentHotels, getHotel, majorityBonus, minorityBonus, playersInMajority, playersInMinority, priceOfStock, roundToNearest100, setupAvailableStocks, setupHotels, setupPlayers, sizeOfChain } from './utils';
+import { adjacentHotels, getColumn, getHotel, getRow, majorityBonus, minorityBonus, playersInMajority, playersInMinority, priceOfStock, roundToNearest100, setupAvailableStocks, setupHotels, setupPlayers, sizeOfChain } from './utils';
 
 export function moveHotelToBoard(G: IG, hotel: Hotel) {
   hotel.hasBeenPlaced = true;
@@ -150,9 +150,12 @@ export function firstBuildTurn(G: IG, ctx: Ctx): number {
     // if we're returning from a merger, it's still the current players turn
     return ctx.playOrder.indexOf(getHotel(G, G.lastPlacedHotel).drawnByPlayer);
   } else {
-    // otherwise choose first player based on initial hotel placement (closest to top left)
+    // otherwise choose first player based on initial hotel placement (closest to top left, letter
+    // first)
     const allHotels = G.hotels.flat();
-    allHotels.sort((a, b) => (a.id > b.id) ? 1 : -1);
+    allHotels
+      .sort((a, b) => getColumn(a) - getColumn(b))
+      .sort((a, b) => getRow(a) - getRow(b));
     return ctx.playOrder.indexOf(allHotels.find(h => h.hasBeenPlaced).drawnByPlayer);
   }
 }
