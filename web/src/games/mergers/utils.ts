@@ -1,13 +1,86 @@
 import { Chain, Hotel, IG, Player } from './types';
 
+const NUM_COLUMNS = 12;
+const ROW_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+
+export function setupHotels(): Hotel[][] {
+  const hotels: Hotel[][] = [];
+  for (let r = 0; r < ROW_LETTERS.length; r++) {
+    hotels.push([]);
+    for (let c = 0; c < NUM_COLUMNS; c++) {
+      hotels[r].push({
+        id: `${c + 1}-${ROW_LETTERS[r]}`,
+        hasBeenPlaced: false,
+        isUnplayable: false,
+      });
+    }
+  }
+  return hotels;
+}
+
+export function setupPlayers(numPlayers: number): Record<string, Player> {
+  const players: Record<string, Player> = {};
+  for (let i = 0; i < numPlayers; i++) {
+    const id = `${i}`;
+    players[id] = {
+      id,
+      money: 6000,
+      stocks: {
+        Tower: 0,
+        Luxor: 0,
+        Worldwide: 0,
+        American: 0,
+        Festival: 0,
+        Continental: 0,
+        Imperial: 0,
+      },
+      hotels: [],
+    };
+  }
+  return players;
+}
+
+export function setupAvailableStocks(): Record<Chain, number> {
+  return {
+    Tower: 25,
+    Luxor: 25,
+    Worldwide: 25,
+    American: 25,
+    Festival: 25,
+    Continental: 25,
+    Imperial: 25,
+  };
+}
+
+function isHotel(hotel: Hotel | string): hotel is Hotel {
+  if ((hotel as Hotel).id) {
+    return true
+  }
+  return false
+}
+
+export function getRow(hotel: Hotel | string): number {
+  const id: string = isHotel(hotel) ? hotel.id : hotel;
+  return ROW_LETTERS.indexOf(id.split('-')[1]);
+}
+
+export function getColumn(hotel: Hotel | string): number {
+  const id: string = isHotel(hotel) ? hotel.id : hotel;
+  return parseInt(id.split('-')[0], 10) - 1; // -1 because columns are 0-based
+}
+
+export function getHotel(G: IG, id: string): Hotel {
+  return G.hotels[getRow(id)][getColumn(id)];
+}
+
 export function adjacentHotels(G: IG, hotel: Hotel): Hotel[] {
-  const c = hotel.column;
-  const r = hotel.row;
+  const r = getRow(hotel);
+  const c = getColumn(hotel);
   return G.hotels.flat()
     .filter(h => h.hasBeenPlaced)
     .filter(h =>
-      (Math.abs(h.row - r) === 1 && h.column === c) ||
-      (Math.abs(h.column - c) === 1 && h.row === r));
+      (Math.abs(getRow(h) - r) === 1 && getColumn(h) === c) ||
+      (Math.abs(getColumn(h) - c) === 1 && getRow(h) === r));
 }
 
 export function sizeOfChain(chain: Chain, hotels: Hotel[][]): number {

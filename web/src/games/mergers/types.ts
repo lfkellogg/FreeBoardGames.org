@@ -1,12 +1,12 @@
 export interface IG {
   // TODO: change this to { 'A1': Hotel } ?
-  hotels: Hotel[][],
-  players: Record<string, Player>,
-  availableStocks: Record<Chain, number>,
-  lastPlacedHotel?: Hotel,
-  survivingChain?: Chain,
-  chainToMerge?: Chain,
-  mergingChains?: Chain[],
+  hotels: Hotel[][];
+  players: Record<string, Player>;
+  availableStocks: Record<Chain, number>;
+  lastPlacedHotel?: string;
+  survivingChain?: Chain;
+  chainToMerge?: Chain;
+  mergingChains?: Chain[];
 }
 
 export enum Chain {
@@ -21,10 +21,8 @@ export enum Chain {
 
 export interface Hotel {
   id: string;
-  column: number;
-  row: number;
-  hasBeenPlaced: boolean;
-  isUnplayable: boolean;
+  hasBeenPlaced?: boolean;
+  isUnplayable?: boolean;
   drawnByPlayer?: string;
   chain?: Chain;
 }
