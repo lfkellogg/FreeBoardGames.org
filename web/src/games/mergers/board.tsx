@@ -31,19 +31,21 @@ export class Board extends React.Component<IBoardProps, {}> {
 
     return css[hotel.chain];
   }
-  renderHotel(hotel: Hotel) {
+  renderHotel(chainTiles: {}, hotel: Hotel, i: number) {
     return (
       <td key={hotel.id}>
         <div
           className={`${css.Hotel} ${this.getClassName(hotel)}`}
           onClick={() => this.props.moves.placeHotel(hotel.id)}
         >
-          {/* {hotel.id} */}
+          <div className={`${css.LabelContainer}`}>
+            {chainTiles[hotel.id]}
+          </div>
         </div>
       </td>
     );
   }
-  renderHotelRow(row: Hotel[], i: number) {
+  renderHotelRow(chainTiles: {}, row: Hotel[], i: number) {
     return (
       <tr key={`hotel-row-${i}`}>
         <td key={`row-header-${i}`}>
@@ -51,7 +53,7 @@ export class Board extends React.Component<IBoardProps, {}> {
             {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'][i]}
           </div>
         </td>
-        {row.map(this.renderHotel)}
+        {row.map(this.renderHotel.bind(this, chainTiles))}
       </tr>
     );
   }
@@ -65,12 +67,20 @@ export class Board extends React.Component<IBoardProps, {}> {
     return <tr>{headers}</tr>;
   }
   renderBoard() {
+    const chainTiles = {};
+    Object.keys(Chain).forEach(key => {
+      const chain = Chain[key];
+      const firstHotel = this.props.G.hotels.flat().find(h => h.chain === chain);
+      if (firstHotel) {
+        chainTiles[firstHotel.id] = chain[0]; // first letter of chain
+      }
+    });
     return (
       <div className={css.Board}>
         <table>
           <tbody>
             {this.renderColumnHeaders()}
-            {this.props.G.hotels.map(this.renderHotelRow)}
+            {this.props.G.hotels.map(this.renderHotelRow.bind(this, chainTiles))}
           </tbody>
         </table>
       </div>

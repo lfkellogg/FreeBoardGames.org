@@ -34,11 +34,17 @@ table {
   height: 100%;
 }
 
+.Board tr {
+  height: 10%;
+}
+
 .Label {
   line-height: 100%;
   color: black;
   text-align: center;
   box-sizing: border-box;
+  font-size: 2vw;
+  color: #455a64;
 }
 
 .Hotel {
@@ -49,6 +55,13 @@ table {
   cursor: default;
   box-sizing: border-box;
   border: 4px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.Hotel .LabelContainer {
+  font-size: 3vw;
 }
 
 .Hotel.Empty {
