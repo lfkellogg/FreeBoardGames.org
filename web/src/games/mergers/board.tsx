@@ -3,6 +3,7 @@ import { IGameArgs } from '../../components/App/Game/GameBoardWrapper';
 import { GameLayout } from '../../components/App/Game/GameLayout';
 import { Ctx } from 'boardgame.io';
 import { Chain, Hotel, IG } from './types';
+import css from './Board.css';
 
 interface IBoardProps {
   G: IG;
@@ -17,62 +18,62 @@ export class Board extends React.Component<IBoardProps, {}> {
     super(props);
     this.renderHotel = this.renderHotel.bind(this);
     this.renderHotelRow = this.renderHotelRow.bind(this);
-    this.renderHotels = this.renderHotels.bind(this);
+    this.renderBoard = this.renderBoard.bind(this);
   }
-  getBackGroundColor(hotel: Hotel) {
+  getClassName(hotel: Hotel) {
     if (!hotel.hasBeenPlaced) {
-      return hotel.drawnByPlayer === this.props.ctx.currentPlayer ? 'lightgray' : 'white';
+      return hotel.drawnByPlayer === this.props.ctx.currentPlayer ? css.InRack : css.Empty;
     }
 
     if (!hotel.chain) {
-      return 'gray';
+      return css.Unclaimed;
     }
 
-    if (hotel.chain === Chain.Tower) {
-      return 'red';
-    } else if (hotel.chain === Chain.Luxor) {
-      return 'yellow';
-    } else if (hotel.chain === Chain.American) {
-      return 'blue';
-    } else if (hotel.chain === Chain.Festival) {
-      return 'forestgreen';
-    } else if (hotel.chain === Chain.Worldwide) {
-      return 'brown';
-    } else if (hotel.chain === Chain.Continental) {
-      return 'teal';
-    } else if (hotel.chain === Chain.Imperial) {
-      return 'deeppink';
-    }
+    return css[hotel.chain];
   }
   renderHotel(hotel: Hotel) {
-    const style = {
-      backgroundColor: this.getBackGroundColor(hotel),
-      color: 'black',
-    };
     return (
-      <td
-        key={hotel.id}
-        style={style}
-        onClick={() => this.props.moves.placeHotel(hotel.id)}
-      >
-        {hotel.id}
+      <td key={hotel.id}>
+        <div
+          className={`${css.Hotel} ${this.getClassName(hotel)}`}
+          onClick={() => this.props.moves.placeHotel(hotel.id)}
+        >
+          {/* {hotel.id} */}
+        </div>
       </td>
     );
   }
   renderHotelRow(row: Hotel[], i: number) {
     return (
       <tr key={`hotel-row-${i}`}>
+        <td key={`row-header-${i}`}>
+          <div className={css.Label}>
+            {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'][i]}
+          </div>
+        </td>
         {row.map(this.renderHotel)}
       </tr>
     );
   }
-  renderHotels() {
+  renderColumnHeaders() {
+    const headers = [];
+    // empty header for the top left corner
+    headers.push(<td key="header-corner" className={css.Label}></td>);
+    for (let i = 0; i < 12; i++) {
+      headers.push(<td key={`header-${i+1}`}className={css.Label}>{i + 1}</td>);
+    }
+    return <tr>{headers}</tr>;
+  }
+  renderBoard() {
     return (
-      <table>
-        <tbody>
-          {this.props.G.hotels.map(this.renderHotelRow)}
-        </tbody>
-      </table>
+      <div className={css.Board}>
+        <table>
+          <tbody>
+            {this.renderColumnHeaders()}
+            {this.props.G.hotels.map(this.renderHotelRow)}
+          </tbody>
+        </table>
+      </div>
     );
   }
   render() {
@@ -80,8 +81,11 @@ export class Board extends React.Component<IBoardProps, {}> {
     console.log('activePlayers', this.props.ctx.activePlayers);
     return (
       <GameLayout
+        allowWiderScreen={true}
         gameArgs={this.props.gameArgs}>
-        { this.renderHotels() }
+        <div className={css.MergersLayout}>
+          { this.renderBoard() }
+        </div>
       </GameLayout>
     );
   }

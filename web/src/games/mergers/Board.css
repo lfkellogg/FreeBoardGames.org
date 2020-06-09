@@ -1,0 +1,109 @@
+div {
+  box-sizing: border-box;
+}
+
+.MergersLayout {
+  padding: 20px;
+  background-color: white;
+}
+
+.Board {
+  font-family: 'Roboto';
+  font-size: 12px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* aspect ratio */
+  width: 100%;
+  height: 0;
+  overflow: hidden;
+  padding-top: 77%;
+  position: relative;
+}
+
+table {
+  table-layout: fixed;
+
+  /* aspect ratio */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.Label {
+  line-height: 100%;
+  color: black;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.Hotel {
+  height: 100%;
+  width: 100%;
+  border-radius: 4px;
+  text-align: center;
+  cursor: default;
+  box-sizing: border-box;
+  border: 4px solid transparent;
+}
+
+.Hotel.Empty {
+  background-color: #e0e0e0; /* material gray 300 */
+  color: black;
+}
+
+.Hotel.InRack {
+  background-color: #ffecb3; /* material amber 100 */
+  color: black;
+  cursor: pointer;
+
+}
+
+.Hotel.InRack:hover {
+  border-color: #455a64;
+}
+
+.Hotel.Unclaimed {
+  background-color: #455a64; /* material blue-gray 700 */
+  color: white;
+}
+
+.Hotel.Tower {
+  background-color: #d32f2f; /* material red 700 */
+  color: white;
+}
+
+.Hotel.Luxor {
+  background-color: #fbc02d; /* material yellow 700 */
+  color: white;
+}
+
+.Hotel.Festival {
+  background-color: #2e7d32; /* material green 800 */
+  color: white;
+}
+
+.Hotel.American {
+  background-color: #1565c0; /* material blue 800 */
+  color: white;
+}
+
+.Hotel.Worldwide {
+  background-color: #6d4c41; /* material brown 600 */
+  color: white;
+}
+
+.Hotel.Continental {
+  background-color: #00838f; /* material teal 800 */
+  color: white;
+}
+
+.Hotel.Imperial {
+  background-color: #c2185b; /* material pink 700 */
+  color: white;
+}
+

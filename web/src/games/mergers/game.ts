@@ -371,6 +371,7 @@ export const MergersGame: Game<IG> = {
           // find and mark any unplayable tiles, and remove from players' racks
           // TODO: maybe move this, gets triggered on merger, for example
           G.hotels.flat().filter(h => isUnplayable(G, h)).forEach(h => {
+            // TODO: this doesn't work, still can be played, just call this method each time
             h.isUnplayable = true;
             if (isPermanentlyUnplayable(G, h) && h.drawnByPlayer) {
               const player: Player = G.players[h.drawnByPlayer];
