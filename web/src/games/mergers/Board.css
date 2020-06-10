@@ -3,14 +3,46 @@ div {
 }
 
 .MergersLayout {
-  padding: 20px;
   background-color: white;
+  color: #455a64;
+  font-family: 'Roboto';
+  padding: 20px;
+  font-size: 2vw;
+}
+
+.Rack {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.Rack .InRackWrapper {
+  height: 6vw;
+  width: 6vw;
+  margin: 1vw;
+}
+
+.PlayerStocks {
+  display: flex;
+  align-items: center;
+}
+
+.PlayerStock {
+  display: flex;
+  align-items: center;
+  margin: 1vw;
+}
+
+.PlayerStock .Hotel.PlayerStockLabel {
+  height: 5vw;
+  width: 3vw;
+  margin: 1vw;
+}
+
+.PlayerStock .PlayerStockCount {
 }
 
 .Board {
-  font-family: 'Roboto';
-  font-size: 12px;
-  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -73,10 +105,9 @@ table {
   background-color: #ffecb3; /* material amber 100 */
   color: black;
   cursor: pointer;
-
 }
 
-.Hotel.InRack:hover {
+.Hotel.InRack.Hover {
   border-color: #455a64;
 }
 
@@ -86,12 +117,12 @@ table {
 }
 
 .Hotel.Tower {
-  background-color: #d32f2f; /* material red 700 */
+  background-color: #fbc02d; /* material red 700 */
   color: white;
 }
 
 .Hotel.Luxor {
-  background-color: #fbc02d; /* material yellow 700 */
+  background-color: #d32f2f; /* material yellow 700 */
   color: white;
 }
 

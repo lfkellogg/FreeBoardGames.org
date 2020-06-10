@@ -15,7 +15,7 @@ export function moveHotelToBoard(G: IG, hotel: Hotel) {
 
 export function placeHotel(G: IG, ctx: Ctx, id: string) {
   const hotel: Hotel = getHotel(G, id);
-  if (hotel.drawnByPlayer !== ctx.currentPlayer || hotel.isUnplayable) {
+  if (hotel.drawnByPlayer !== ctx.currentPlayer || isUnplayable(G, hotel)) {
     return INVALID_MOVE;
   }
   moveHotelToBoard(G, hotel);
@@ -134,7 +134,7 @@ export function assignRandomHotel(G: IG, ctx: Ctx, player: Player): boolean {
 }
 
 export function getRandomHotel(G: IG, ctx: Ctx): Hotel | undefined {
-  const undrawnHotels = G.hotels.flat().filter(h => !h.drawnByPlayer && !h.isUnplayable);
+  const undrawnHotels = G.hotels.flat().filter(h => !h.drawnByPlayer && !isUnplayable(G, h));
   if (undrawnHotels.length > 0) {
     return undrawnHotels[Math.floor(ctx.random.Number() * undrawnHotels.length)];
   }
@@ -370,15 +370,13 @@ export const MergersGame: Game<IG> = {
         onEnd: (G: IG, ctx: Ctx) => {
           // find and mark any unplayable tiles, and remove from players' racks
           // TODO: maybe move this, gets triggered on merger, for example
-          G.hotels.flat().filter(h => isUnplayable(G, h)).forEach(h => {
-            // TODO: this doesn't work, still can be played, just call this method each time
-            h.isUnplayable = true;
-            if (isPermanentlyUnplayable(G, h) && h.drawnByPlayer) {
+          G.hotels.flat()
+            .filter(h => isPermanentlyUnplayable(G, h) && h.drawnByPlayer)
+            .forEach(h => {
               const player: Player = G.players[h.drawnByPlayer];
               player.hotels = player.hotels.filter(h2 => h2.id !== h.id);
               h.drawnByPlayer = undefined;
-            }
-          });
+            });
         },
 
         stages: {

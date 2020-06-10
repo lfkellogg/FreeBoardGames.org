@@ -11,7 +11,6 @@ export function setupHotels(): Hotel[][] {
       hotels[r].push({
         id: `${c + 1}-${ROW_LETTERS[r]}`,
         hasBeenPlaced: false,
-        isUnplayable: false,
       });
     }
   }

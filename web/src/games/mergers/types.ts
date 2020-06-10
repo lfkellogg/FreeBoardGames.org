@@ -22,7 +22,6 @@ export enum Chain {
 export interface Hotel {
   id?: string;
   hasBeenPlaced?: boolean;
-  isUnplayable?: boolean;
   drawnByPlayer?: string;
   chain?: Chain;
 }
