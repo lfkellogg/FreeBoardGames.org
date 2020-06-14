@@ -53,9 +53,9 @@ export function setupAvailableStocks(): Record<Chain, number> {
 
 function isHotel(hotel: Hotel | string): hotel is Hotel {
   if ((hotel as Hotel).id) {
-    return true
+    return true;
   }
-  return false
+  return false;
 }
 
 export function getRow(hotel: Hotel | string): number {
@@ -75,15 +75,17 @@ export function getHotel(G: IG, id: string): Hotel {
 export function adjacentHotels(G: IG, hotel: Hotel): Hotel[] {
   const r = getRow(hotel);
   const c = getColumn(hotel);
-  return G.hotels.flat()
-    .filter(h => h.hasBeenPlaced)
-    .filter(h =>
-      (Math.abs(getRow(h) - r) === 1 && getColumn(h) === c) ||
-      (Math.abs(getColumn(h) - c) === 1 && getRow(h) === r));
+  return G.hotels
+    .flat()
+    .filter((h) => h.hasBeenPlaced)
+    .filter(
+      (h) =>
+        (Math.abs(getRow(h) - r) === 1 && getColumn(h) === c) || (Math.abs(getColumn(h) - c) === 1 && getRow(h) === r),
+    );
 }
 
 export function sizeOfChain(chain: Chain, hotels: Hotel[][]): number {
-  return hotels.flat().filter(h => h.chain === chain).length;
+  return hotels.flat().filter((h) => h.chain === chain).length;
 }
 
 export function priceOfStock(chain: Chain, hotels: Hotel[][]): number {
@@ -124,7 +126,7 @@ export function playersInMajority(G: IG, chain: Chain): Player[] {
   if (majorityStockCount === 0) {
     return [];
   }
-  return players.filter(p => p.stocks[chain] === majorityStockCount);
+  return players.filter((p) => p.stocks[chain] === majorityStockCount);
 }
 
 export function playersInMinority(G: IG, chain: Chain): Player[] {
@@ -134,7 +136,7 @@ export function playersInMinority(G: IG, chain: Chain): Player[] {
   if (majorityStockCount === minorityStockCount || minorityStockCount === 0) {
     return [];
   }
-  return players.filter(p => p.stocks[chain] === minorityStockCount);
+  return players.filter((p) => p.stocks[chain] === minorityStockCount);
 }
 
 export function majorityBonus(G: IG, chain: Chain): number {

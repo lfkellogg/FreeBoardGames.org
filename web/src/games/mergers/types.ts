@@ -10,13 +10,13 @@ export interface IG {
 }
 
 export enum Chain {
-  Tower = "Tower",
-  Luxor = "Luxor",
-  Worldwide = "Worldwide",
-  American = "American",
-  Festival = "Festival",
-  Continental = "Continental",
-  Imperial = "Imperial",
+  Tower = 'Tower',
+  Luxor = 'Luxor',
+  Worldwide = 'Worldwide',
+  American = 'American',
+  Festival = 'Festival',
+  Continental = 'Continental',
+  Imperial = 'Imperial',
 }
 
 export interface Hotel {
@@ -34,7 +34,7 @@ export interface Player {
 }
 
 export interface Score {
-  id?: string,
-  money?: number,
-  winner?: boolean,
+  id?: string;
+  money?: number;
+  winner?: boolean;
 }

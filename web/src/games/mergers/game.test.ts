@@ -1,10 +1,15 @@
 import { Ctx } from 'boardgame.io';
 import { Client } from 'boardgame.io/client';
 import { INVALID_MOVE } from 'boardgame.io/core';
-import { Local } from 'boardgame.io/multiplayer';
-import { assignHotelToPlayer, autosetChainToMerge, awardBonuses, chooseChainToMerge, chooseSurvivingChain, MergersGame, moveHotelToBoard } from './game';
-import { Chain, Hotel, IG, Player } from './types';
-import { getHotel, setupPlayers, setupAvailableStocks, playersInDescOrderOfStock, playersInMajority, playersInMinority } from './utils';
+import { autosetChainToMerge, awardBonuses, chooseChainToMerge, chooseSurvivingChain, MergersGame } from './game';
+import { Chain, Hotel, IG } from './types';
+import {
+  setupPlayers,
+  setupAvailableStocks,
+  playersInDescOrderOfStock,
+  playersInMajority,
+  playersInMinority,
+} from './utils';
 
 // TODO:
 // - test mergers
@@ -29,8 +34,7 @@ function setupTestHotels(): Hotel[][] {
   ];
 }
 
-function getTestClient(
-  numPlayers: number = 2, hotels?: Hotel[][]): Client {
+function getTestClient(numPlayers: number = 2, hotels?: Hotel[][]): Client {
   const MergersCustomScenario = {
     ...MergersGame,
     setup: (ctx: Ctx) => {
@@ -99,11 +103,7 @@ describe('placeHotel', () => {
         { id: '2-B' },
         { id: '3-B', hasBeenPlaced: true },
       ],
-      [
-        { id: '1-C' },
-        { id: '2-C' },
-        { id: '3-C', drawnByPlayer: '0' },
-      ],
+      [{ id: '1-C' }, { id: '2-C' }, { id: '3-C', drawnByPlayer: '0' }],
     ]);
   });
   it('joins a neighboring unassigned hotel to adjacent chain', () => {
@@ -120,11 +120,7 @@ describe('placeHotel', () => {
         { id: '2-B' },
         { id: '3-B', hasBeenPlaced: true, chain: Chain.Tower }, // joined Tower
       ],
-      [
-        { id: '1-C' },
-        { id: '2-C' },
-        { id: '3-C', drawnByPlayer: '0' },
-      ],
+      [{ id: '1-C' }, { id: '2-C' }, { id: '3-C', drawnByPlayer: '0' }],
     ]);
   });
   it('starts a new chain when placed next to a lone hotel', () => {
@@ -135,11 +131,7 @@ describe('placeHotel', () => {
         { id: '2-A', hasBeenPlaced: true, chain: Chain.Tower },
         { id: '3-A', drawnByPlayer: '0' },
       ],
-      [
-        { id: '1-B', drawnByPlayer: '0' },
-        { id: '2-B' },
-        { id: '3-B', hasBeenPlaced: true },
-      ],
+      [{ id: '1-B', drawnByPlayer: '0' }, { id: '2-B' }, { id: '3-B', hasBeenPlaced: true }],
       [
         { id: '1-C' },
         { id: '2-C' },
@@ -279,12 +271,12 @@ describe('awardBonuses', () => {
     // size of chain = 3 => stock price = 300, majority = 3000, minority = 1500
     const hotels = [
       [{ chain: Chain.Tower }, { chain: Chain.Tower }],
-      [{ chain: Chain.Tower }, { chain: Chain.American }]
+      [{ chain: Chain.Tower }, { chain: Chain.American }],
     ];
 
     const G: IG = {
       players: { '0': player0, '1': player1, '2': player2 },
-      hotels
+      hotels,
     };
 
     awardBonuses(G, Chain.Tower);
