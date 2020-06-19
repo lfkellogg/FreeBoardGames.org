@@ -318,18 +318,19 @@ export function declareGameOver(G: IG, ctx: Ctx, isGameOver: boolean) {
       if (stockPrice === undefined) {
         return;
       }
-      Object.values(G.players).forEach((p) => {
-        const numStock = p.stocks[c];
-        p.money += numStock * stockPrice;
-        p.stocks[c] -= numStock;
+      Object.keys(G.players).forEach((key) => {
+        const numStock = G.players[key].stocks[c];
+        G.players[key].money += numStock * stockPrice;
+        G.players[key].stocks[c] -= numStock;
         G.availableStocks[c] += numStock;
       });
     });
 
-    const playerArray = Object.values(G.players);
+    let playerArray = Object.values(G.players);
+    playerArray = playerArray.slice(0, playerArray.length);
     playerArray.sort((a, b) => b.money - a.money);
     const winningScore = playerArray[0].money;
-    const winners = playerArray.filter((p) => p.money === winningScore);
+    const winners = playerArray.filter((p) => p.money === winningScore).map((p) => p.id);
     ctx.events.endGame({
       winner: winners.length === 1 ? winners[0] : undefined,
       winners: winners.length > 1 ? winners : undefined,

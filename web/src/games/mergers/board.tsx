@@ -316,7 +316,17 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     const playerID = '0';
     const playerIndex = this.props.ctx.playOrder.indexOf(playerID);
     let content;
-    if (this.props.ctx.phase === 'buildingPhase') {
+    if (this.props.ctx.gameover) {
+      const { winner, winners, scores } = this.props.ctx.gameover;
+      let message: string;
+      if (winner) {
+        message = `${this.props.gameArgs.players[winner].name} wins! `;
+      } else {
+        message = `${winners.map((id) => this.props.gameArgs.players[id].name).join(' & ')} tied! `;
+      }
+      message += `Scores: ${scores.map((s) => `${this.props.gameArgs.players[s.id].name} - $${s.money}`).join(', ')}`;
+      content = <div>{message}</div>;
+    } else if (this.props.ctx.phase === 'buildingPhase') {
       const stage = this.props.ctx.activePlayers[playerIndex];
       //console.log('stage: ', stage);
       switch (stage) {
@@ -392,7 +402,8 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     );
   }
   renderLastMove() {
-    let message: string = this.props.G.lastMove;
+    let message: string;
+    message = this.props.G.lastMove;
     this.props.gameArgs.players.forEach((p) => {
       message = message.replace(new RegExp(`Player ${p.playerID}`, 'g'), p.name);
     });
