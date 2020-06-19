@@ -12,6 +12,7 @@ import {
   playersInMinority,
   priceOfStock,
   roundToNearest100,
+  roundToNearest2,
   setupAvailableStocks,
   setupHotels,
   setupPlayers,
@@ -30,6 +31,10 @@ export function moveHotelToBoard(G: IG, hotel: Hotel) {
 
 export function placeHotel(G: IG, ctx: Ctx, id?: string) {
   if (!id) {
+    if (G.players[ctx.currentPlayer].hotels.length > 0) {
+      return INVALID_MOVE;
+    }
+    G.lastMove = `Player ${ctx.currentPlayer} doesn't have any hotels to play`;
     ctx.events.endStage();
     return;
   }
@@ -39,6 +44,7 @@ export function placeHotel(G: IG, ctx: Ctx, id?: string) {
     return INVALID_MOVE;
   }
   moveHotelToBoard(G, hotel);
+  G.lastMove = `Player ${ctx.currentPlayer} plays ${id}`;
   G.lastPlacedHotel = id;
 
   const adjacent = adjacentHotels(G, hotel);
@@ -86,6 +92,7 @@ export function chooseNewChain(G: IG, ctx: Ctx, chain: Chain) {
     G.availableStocks[chain]--;
     G.players[lastPlacedHotel.drawnByPlayer].stocks[chain]++;
   }
+  G.lastMove = `Player ${ctx.currentPlayer} chooses ${chain} as the new chain`;
   ctx.events.endStage();
 }
 
@@ -102,6 +109,7 @@ export function gameCanBeDeclaredOver(G: IG) {
 }
 
 export function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
+  G.lastMove = '';
   if (order) {
     const player = G.players[ctx.playOrderPos];
     let purchasesRemaining = 3;
@@ -116,6 +124,12 @@ export function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
         return;
       }
       let stocksToBuy = Math.min(num, Math.min(G.availableStocks[chain], purchasesRemaining));
+      if (!G.lastMove) {
+        G.lastMove += `Player ${ctx.currentPlayer} buys `;
+      } else {
+        G.lastMove += ', ';
+      }
+      G.lastMove += `${stocksToBuy} ${chain}`;
       while (stocksToBuy > 0 && player.money >= stockPrice) {
         player.stocks[chain]++;
         player.money -= stockPrice;
@@ -124,6 +138,10 @@ export function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
         purchasesRemaining--;
       }
     });
+  }
+
+  if (!G.lastMove) {
+    G.lastMove = `Player ${ctx.currentPlayer} doesn't buy any stock`;
   }
 
   if (gameCanBeDeclaredOver(G)) {
@@ -184,6 +202,7 @@ export function chooseSurvivingChain(G: IG, ctx, chain: Chain) {
   }
   G.survivingChain = chain;
   G.mergingChains.splice(G.mergingChains.indexOf(chain), 1);
+  G.lastMove = `Player ${ctx.currentPlayer} chooses ${chain} to survive the merger`;
 }
 
 export function chooseChainToMerge(G: IG, ctx, chain: Chain) {
@@ -197,12 +216,31 @@ export function chooseChainToMerge(G: IG, ctx, chain: Chain) {
   // move the chain to the front of the array
   G.mergingChains.splice(G.mergingChains.indexOf(chain), 1);
   G.mergingChains.unshift(chain);
+  G.lastMove = `Player ${ctx.currentPlayer} chooses ${chain} to merge next`;
 }
 
 // TODO: test this
-export function swapAndSellStock(G: IG, ctx: Ctx, swap: number, sell: number) {
+export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) {
   const player = G.players[ctx.currentPlayer];
-  const toSwap = Math.min(swap, Math.min(player.stocks[G.chainToMerge], G.availableStocks[G.survivingChain] * 2));
+  const originalStockCount = player.stocks[G.chainToMerge];
+
+  if (originalStockCount === 0) {
+    G.lastMove = `Player ${ctx.currentPlayer} has no ${G.chainToMerge} stock`;
+  } else {
+    G.lastMove = '';
+  }
+
+  let toSwap = swap || 0;
+  toSwap = Math.min(toSwap, originalStockCount);
+  toSwap = Math.min(toSwap, G.availableStocks[G.survivingChain] * 2);
+  toSwap = roundToNearest2(toSwap);
+
+  let toSell = sell || 0;
+  toSell = Math.min(toSell, originalStockCount);
+
+  if (toSwap > 0) {
+    G.lastMove = `Player ${ctx.currentPlayer} swaps ${toSwap} ${G.chainToMerge} for ${toSwap / 2} ${G.survivingChain}`;
+  }
 
   // player gives away N stocks of the merged chan
   player.stocks[G.chainToMerge] -= toSwap;
@@ -213,10 +251,26 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap: number, sell: number) {
   G.availableStocks[G.survivingChain] -= toSwap / 2;
 
   // players sells stocks
-  const toSell = Math.min(sell, player.stocks[G.chainToMerge]);
+  if (toSell > 0) {
+    if (G.lastMove) {
+      G.lastMove += ', ';
+    } else {
+      G.lastMove += `Player ${ctx.currentPlayer} `;
+    }
+    G.lastMove += `sells ${toSell} ${G.chainToMerge}`;
+  }
   player.stocks[G.chainToMerge] -= toSell;
   G.availableStocks[G.chainToMerge] += toSell;
   player.money += toSell * priceOfStock(G.chainToMerge, G.hotels);
+
+  if (originalStockCount > 0 && player.stocks[G.chainToMerge] > 0) {
+    if (!G.lastMove) {
+      G.lastMove += `Player ${ctx.currentPlayer} `;
+    } else {
+      G.lastMove += ', ';
+    }
+    G.lastMove += `keeps ${player.stocks[G.chainToMerge]} ${G.chainToMerge}`;
+  }
 }
 
 export function isUnplayable(G: IG, hotel: Hotel) {
@@ -248,6 +302,7 @@ export function isTemporarilyUnplayable(G: IG, hotel: Hotel) {
 
 export function declareGameOver(G: IG, ctx: Ctx, isGameOver: boolean) {
   if (isGameOver) {
+    G.lastMove = `Player ${ctx.currentPlayer} declares the game over`;
     // award bonuses for remaining chains
     const chains = new Set<Chain>(
       G.hotels
@@ -291,6 +346,7 @@ export function declareGameOver(G: IG, ctx: Ctx, isGameOver: boolean) {
   }
 }
 
+// TODO: log all messages so we can log individual messages for each bonus payout etc.
 export function awardBonuses(G: IG, chain: Chain) {
   const majority = playersInMajority(G, chain);
   if (majority.length === 1) {
@@ -359,6 +415,7 @@ export const MergersGame: Game<IG> = {
       hotels,
       players: setupPlayers(ctx.numPlayers),
       availableStocks: setupAvailableStocks(),
+      lastMove: '',
     };
 
     setupInitialDrawing(G, ctx);

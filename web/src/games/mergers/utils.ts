@@ -154,5 +154,9 @@ export function minorityBonus(G: IG, chain: Chain): number {
 }
 
 export function roundToNearest100(x: number): number {
-  return (x / 100) * 100;
+  return Math.floor(x / 100) * 100;
+}
+
+export function roundToNearest2(x: number): number {
+  return Math.floor(x / 2) * 2;
 }

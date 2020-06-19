@@ -266,7 +266,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
   renderSwapAndSellStock() {
     return (
       <div className={css.WrapRow}>
-        <div className={css.RowLabel}>Do you want to exchange any stock?</div>
+        <div className={css.RowLabel}>{`Do you want to exchange any ${this.props.G.chainToMerge} stock?`}</div>
         <div>Swap</div>
         <TextField
           className={css.BuyStockInput}
@@ -391,6 +391,18 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+  renderLastMove() {
+    let message: string = this.props.G.lastMove;
+    this.props.gameArgs.players.forEach((p) => {
+      message = message.replace(new RegExp(`Player ${p.playerID}`, 'g'), p.name);
+    });
+    return (
+      <div className={css.WrapRow}>
+        <div className={css.RowLabel}>Last move:</div>
+        <div>{message}</div>
+      </div>
+    );
+  }
   render() {
     // console.log('rendering with props', this.props);
     // console.log('rendering with state', this.state);
@@ -400,6 +412,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
         <div className={css.MergersLayout}>
           {this.renderPlayers()}
           {this.renderAvailableStocks()}
+          {this.renderLastMove()}
           {this.renderBoard()}
           {this.renderActions()}
           {this.renderPlayerStatus()}

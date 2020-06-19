@@ -7,6 +7,7 @@ export interface IG {
   survivingChain?: Chain;
   chainToMerge?: Chain;
   mergingChains?: Chain[];
+  lastMove: string;
 }
 
 export enum Chain {
