@@ -28,7 +28,12 @@ export function moveHotelToBoard(G: IG, hotel: Hotel) {
   }
 }
 
-export function placeHotel(G: IG, ctx: Ctx, id: string) {
+export function placeHotel(G: IG, ctx: Ctx, id?: string) {
+  if (!id) {
+    ctx.events.endStage();
+    return;
+  }
+
   const hotel: Hotel = getHotel(G, id);
   if (hotel.drawnByPlayer !== ctx.currentPlayer || isUnplayable(G, hotel)) {
     return INVALID_MOVE;
@@ -106,10 +111,10 @@ export function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
       if (!num) {
         return;
       }
-      if (!G.hotels.flat().find((h) => h.chain === chain)) {
+      const stockPrice = priceOfStock(chain, G.hotels);
+      if (stockPrice === undefined) {
         return;
       }
-      const stockPrice = priceOfStock(chain, G.hotels);
       let stocksToBuy = Math.min(num, Math.min(G.availableStocks[chain], purchasesRemaining));
       while (stocksToBuy > 0 && player.money >= stockPrice) {
         player.stocks[chain]++;
@@ -254,9 +259,13 @@ export function declareGameOver(G: IG, ctx: Ctx, isGameOver: boolean) {
 
     // sell off all remaining stock in those chains
     chains.forEach((c) => {
+      const stockPrice = priceOfStock(c, G.hotels);
+      if (stockPrice === undefined) {
+        return;
+      }
       Object.values(G.players).forEach((p) => {
         const numStock = p.stocks[c];
-        p.money += numStock * priceOfStock(c, G.hotels);
+        p.money += numStock * stockPrice;
         p.stocks[c] -= numStock;
         G.availableStocks[c] += numStock;
       });
@@ -416,8 +425,8 @@ export const MergersGame: Game<IG> = {
       },
 
       onBegin: (G: IG, ctx: Ctx) => {
-        // if returning from a merger phase, we're now in the buy stock stage
         if (G.lastPlacedHotel) {
+          // if returning from a merger phase, we're now in the buy stock stage
           const hotel = getHotel(G, G.lastPlacedHotel);
           absorbNewHotels(G, hotel.chain, G.lastPlacedHotel);
           ctx.events.setActivePlayers({ value: { [hotel.drawnByPlayer]: 'buyStockStage' } });

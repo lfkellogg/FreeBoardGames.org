@@ -6,8 +6,19 @@ div {
   background-color: white;
   color: #455a64;
   font-family: 'Roboto';
-  padding: 1vw;
-  font-size: 2vw;
+  padding: 1em;
+  font-size: 1.25em;
+}
+
+.AvailableStockAndPrice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 0.5em;
+}
+
+.Clickable {
+  cursor: pointer;
 }
 
 .Rack {
@@ -17,41 +28,72 @@ div {
 }
 
 .Rack .InRackWrapper {
-  height: 6vw;
-  width: 6vw;
-  margin: 0.5vw;
+  height: 6em;
+  width: 6em;
+  margin: 0.5em;
 }
 
-.Players {
-  display: flex;
-  align-items: center;
-}
-
-.Players .Player {
-  margin-left: 1vw;
+.Player {
+  margin-right: 1em;
   border: 4px solid transparent;
-  border-radius: 0.25vw;
-  padding: 0.5vw;
+  border-radius: 0.25em;
+  padding: 0.5em;
 }
 
-.Players .Player.CurrentTurn {
+.Player.CurrentTurn {
   border-color: black; /* material red 700 */
 }
 
-.Actions {
+.RowLabel {
+  margin-right: 1em;
+}
+
+.WrapRow {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.FlexColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.WrapRow button {
+  margin-left: 1em;
+}
+
+.StockToBuy {
+  margin-right: 1em;
+}
+
+.BuyStockInput {
+  width: 1em;
+}
+
+.Actions {
+  border: 0.25em solid black;
+  border-radius: 0.25em;
+  padding: 0.5em;
+  margin-top: 0.25em;
+}
+
+.Actions.YourTurn {
+  border-color: red;
 }
 
 .PlayerStocks {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  margin: 0.25em 0;
 }
 
 .PlayerStock {
   display: flex;
   align-items: flex-end;
-  margin: 0.75vw;
+  margin-right: 0.25em;
 }
 
 .PlayerStock.HiddenStock {
@@ -61,11 +103,11 @@ div {
   margin: 0;
 }
 
-.PlayerStock .Hotel.PlayerStockLabel {
-  height: 3vw;
-  width: 2vw;
-  margin: 0.5vw;
-  font-size: 1.5vw;
+.Hotel.PlayerStockLabel {
+  height: 2em;
+  width: 1.5em;
+  margin-right: 0.25em;
+  font-size: 1em;
 }
 
 .Board {
@@ -74,52 +116,54 @@ div {
   justify-content: center;
 
   /* aspect ratio */
-  width: 100%;
+  /* width: 100%;
   height: 0;
   overflow: hidden;
   padding-top: 75%;
   position: relative;
-  margin: 0.5vw 0;
+  margin: 0.5em 0; */
 }
 
 table {
-  table-layout: fixed;
+  /* table-layout: fixed; */
 
   /* aspect ratio */
-  position: absolute;
+  /* position: absolute;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: 100%; */
 }
 
 .Board .HotelRow {
-  height: 10%;
+  /* height: 11%; */
 }
 
 .Label {
   line-height: 100%;
   text-align: center;
   box-sizing: border-box;
-  font-size: 1.5vw;
+  font-size: 1.5em;
   color: #455a64;
 }
 
 .Hotel {
-  height: 100%;
-  width: 100%;
-  border-radius: 0.25vw;
+  height: 6vw;
+  width: 6vw;
+  max-width: 6vh;
+  max-height: 6vh;
+  border-radius: 0.25em;
   text-align: center;
   cursor: default;
   box-sizing: border-box;
-  border: 0.25vw solid transparent;
+  border: 0.25em solid transparent;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .Hotel .LabelContainer {
-  font-size: 3vw;
+  font-size: 1.25em;
 }
 
 .Hotel.Empty {

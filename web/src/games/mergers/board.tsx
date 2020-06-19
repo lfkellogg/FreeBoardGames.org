@@ -1,8 +1,11 @@
 import * as React from 'react';
+import Button from '@material-ui/core/Button';
+import TextField from '@material-ui/core/TextField';
 import { IGameArgs } from 'gamesShared/definitions/game';
 import { GameLayout } from 'gamesShared/components/fbg/GameLayout';
 import { Ctx } from 'boardgame.io';
 import { Chain, Hotel, IG } from './types';
+import { priceOfStock, sizeOfChain } from './utils';
 import css from './Board.css';
 
 interface IBoardProps {
@@ -14,6 +17,9 @@ interface IBoardProps {
 }
 
 interface IBoardState {
+  stocksToBuy: Partial<Record<Chain, number>>;
+  stocksToSwap?: number;
+  stocksToSell?: number;
   hoveredHotel?: string;
 }
 
@@ -24,7 +30,9 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     this.renderHotelRow = this.renderHotelRow.bind(this);
     this.renderBoard = this.renderBoard.bind(this);
     this.renderHotelInRack = this.renderHotelInRack.bind(this);
-    this.state = {};
+    this.state = {
+      stocksToBuy: {},
+    };
   }
   getClassName(hotel: Hotel) {
     if (!hotel.hasBeenPlaced) {
@@ -112,19 +120,30 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
-  renderStock(chain: Chain, count: number) {
-    const hiddenClass = count === 0 ? css.HiddenStock : '';
+  renderStockLabel(chain: Chain, onClick?: () => void) {
+    return (
+      <div
+        key={`stock-label-${chain}`}
+        className={`${css.Hotel} ${css[chain]} ${css.PlayerStockLabel} ${onClick ? css.Clickable : ''}`}
+        onClick={onClick}
+      >
+        {chain[0]}
+      </div>
+    );
+  }
+  renderStock(chain: Chain, count: number, hideEmpty?: boolean) {
+    const hiddenClass = hideEmpty && count === 0 ? css.HiddenStock : '';
     return (
       <div key={`stock-count-${chain}`} className={`${css.PlayerStock} ${hiddenClass}`}>
-        <div className={`${css.Hotel} ${css[chain]} ${css.PlayerStockLabel}`}>{chain[0]}</div>
+        {this.renderStockLabel(chain)}
         <div className={css.PlayerStockCount}>{`/${count}`}</div>
       </div>
     );
   }
   renderPlayers() {
     return (
-      <div className={css.Players}>
-        <div>Current turn:</div>
+      <div className={css.WrapRow}>
+        <div className={css.RowLabel}>Current turn:</div>
         {this.props.gameArgs.players.map((player) => {
           const turnClass = this.props.ctx.currentPlayer === `${player.playerID}` ? css.CurrentTurn : '';
           return (
@@ -136,18 +155,220 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+  renderAvailableStock(chain: Chain) {
+    const stockPrice = priceOfStock(chain, this.props.G.hotels);
+    return (
+      <div key={`available-stock-${chain}`} className={css.AvailableStockAndPrice}>
+        {this.renderStock(chain, this.props.G.availableStocks[chain])}
+        {stockPrice === undefined ? '--' : `$${stockPrice}`}
+      </div>
+    );
+  }
   renderAvailableStocks() {
     return (
       <div className={css.PlayerStocks}>
-        <div>Available stocks:</div>
-        {Object.keys(Chain)
-          .filter((key) => this.props.G.availableStocks[key] > 0)
-          .map((key) => this.renderStock(Chain[key], this.props.G.availableStocks[Chain[key]]))}
+        <div className={css.RowLabel}>Available stocks:</div>
+        {Object.keys(Chain).map((key) => this.renderAvailableStock(Chain[key]))}
+      </div>
+    );
+  }
+  renderChooseChain() {
+    return (
+      <div className={css.WrapRow}>
+        <div className={css.RowLabel}>Choose the new chain:</div>
+        {Object.keys(Chain).map((key) =>
+          this.renderStockLabel(Chain[key], () => this.props.moves.chooseNewChain(Chain[key])),
+        )}
+      </div>
+    );
+  }
+  renderStockToBuy(chain: Chain) {
+    const stockPrice = priceOfStock(chain, this.props.G.hotels);
+    if (stockPrice === undefined) {
+      return;
+    }
+    return (
+      <div key={`stock-to-buy-${chain}`} className={`${css.StockToBuy} ${css.WrapRow}`}>
+        {this.renderStockLabel(chain)}
+        <TextField
+          className={css.BuyStockInput}
+          placeholder="#"
+          value={this.state.stocksToBuy[chain] || ''}
+          onChange={(e) => {
+            this.setState({
+              stocksToBuy: {
+                ...this.state.stocksToBuy,
+                [chain]: e.target.value || 0,
+              },
+            });
+          }}
+        ></TextField>
+      </div>
+    );
+  }
+  renderButton(text: string, onClick: () => void) {
+    return (
+      <Button variant="contained" color="primary" onClick={onClick}>
+        {text}
+      </Button>
+    );
+  }
+  renderBuyStock() {
+    return (
+      <div className={css.WrapRow}>
+        <div className={css.RowLabel}>Buy up to 3 stocks:</div>
+        {Object.keys(Chain).map((key) => this.renderStockToBuy(Chain[key]))}
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => {
+            // this seems to crash right now
+            this.props.moves.buyStock(this.state.stocksToBuy);
+            this.setState({ stocksToBuy: {} });
+          }}
+        >
+          Buy
+        </Button>
+      </div>
+    );
+  }
+  renderGameOverChoice() {
+    return (
+      <div className={css.WrapRow}>
+        <div className={css.RowLabel}>Do you want to end the game?</div>
+        {this.renderButton('Yes (end the game)', () => this.props.moves.declareGameOver(true))}
+        {this.renderButton('No (keep playing)', () => this.props.moves.declareGameOver(false))}
+      </div>
+    );
+  }
+  renderBreakMergerTieChain(message: string, move: string) {
+    const chainSizes = this.props.G.mergingChains.map((c) => ({ chain: c, size: sizeOfChain(c, this.props.G.hotels) }));
+    const biggestChainSize = chainSizes[0].size;
+    const choices = chainSizes
+      .filter((chainSize) => chainSize.size === biggestChainSize)
+      .map((chainSize) => chainSize.chain);
+    return (
+      <div className={css.WrapRow}>
+        <div className={css.RowLabel}>{message}</div>
+        {choices.map((chain) => this.renderStockLabel(chain, () => this.props.moves[move](chain)))}
+      </div>
+    );
+  }
+  renderChooseSurvivingChain() {
+    return this.renderBreakMergerTieChain(
+      'There is a tie. Choose the chain that will survive the merger:',
+      'chooseSurvivingChain',
+    );
+  }
+  renderChooseChainToMerge() {
+    return this.renderBreakMergerTieChain('There is a tie. Choose the chain to merge next:', 'chooseChainToMerge');
+  }
+  renderSwapAndSellStock() {
+    return (
+      <div className={css.WrapRow}>
+        <div className={css.RowLabel}>Do you want to exchange any stock?</div>
+        <div>Swap</div>
+        <TextField
+          className={css.BuyStockInput}
+          placeholder="#"
+          value={this.state.stocksToSwap || ''}
+          onChange={(e) => {
+            let n = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+            if (Number.isNaN(n)) {
+              n = 0;
+            }
+            this.setState({
+              stocksToSwap: n,
+            });
+          }}
+        ></TextField>
+        <div>Sell</div>
+        <TextField
+          className={css.BuyStockInput}
+          placeholder="#"
+          value={this.state.stocksToSell || ''}
+          onChange={(e) => {
+            let n = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+            if (Number.isNaN(n)) {
+              n = 0;
+            }
+            this.setState({
+              stocksToSell: n,
+            });
+          }}
+        ></TextField>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => {
+            // this seems to crash right now
+            this.props.moves.swapAndSellStock(this.state.stocksToSwap || 0, this.state.stocksToSell || 0);
+            this.setState({ stocksToSwap: 0, stocksToSell: 0 });
+          }}
+        >
+          Exchange
+        </Button>
       </div>
     );
   }
   renderActions() {
-    return <div className={css.Actions}></div>;
+    // const playerID = this.props.playerID;
+    const playerID = '0';
+    const playerIndex = this.props.ctx.playOrder.indexOf(playerID);
+    let content;
+    if (this.props.ctx.phase === 'buildingPhase') {
+      const stage = this.props.ctx.activePlayers[playerIndex];
+      //console.log('stage: ', stage);
+      switch (stage) {
+        case 'placeHotelStage':
+          if (this.props.G.players[this.props.ctx.currentPlayer].hotels.length === 0) {
+            content = this.renderButton('Continue (you have no hotels to play)', () => this.props.moves.placeHotel());
+          } else {
+            content = <div>Click a yellow square above to place hotel</div>;
+          }
+          break;
+        case 'chooseNewChainStage':
+          content = this.renderChooseChain();
+          break;
+        case 'buyStockStage':
+          content = this.renderBuyStock();
+          break;
+        case 'declareGameOverStage':
+          content = this.renderGameOverChoice();
+          break;
+        case 'drawHotelsStage':
+          content = this.renderButton('Draw hotels', () => this.props.moves.drawHotels());
+          break;
+        default:
+          break;
+      }
+    } else if (this.props.ctx.currentPlayer === playerID) {
+      switch (this.props.ctx.phase) {
+        case 'chooseSurvivingChainPhase':
+          content = this.renderChooseSurvivingChain();
+          break;
+        case 'chooseChainToMergePhase':
+          content = this.renderChooseChainToMerge();
+          break;
+        case 'mergerPhase':
+          content = this.renderSwapAndSellStock();
+          break;
+        default:
+          break;
+      }
+    }
+    // if buildingPhase
+    // check stage
+    // if me
+    // give me the moves for the stage: else // else
+    // check turn
+    // if me
+    // if chooseSurvivingChainPhase...
+    // if chooseChainToMergePhase...
+    // if mergerPhase... swapAndSellStock
+    return (
+      <div className={`${css.Actions} ${css.WrapRow} ${content ? css.YourTurn : ''}`}>{content || 'Not your turn'}</div>
+    );
   }
   renderPlayerStatus() {
     // TODO: will this be set in multiplayer mode?
@@ -160,10 +381,13 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
           {player.hotels.map(this.renderHotelInRack)}
         </div> */}
         <div className={css.PlayerStocks}>
-          <div>Your stocks:</div>
-          {Object.keys(Chain).map((key) => this.renderStock(Chain[key], player.stocks[Chain[key]]))}
+          <div className={css.RowLabel}>Your stocks:</div>
+          {Object.keys(Chain).map((key) => this.renderStock(Chain[key], player.stocks[Chain[key]], true))}
         </div>
-        <div className={css.PlayerMoney}>Your money: ${player.money}</div>
+        <div className={css.PlayerMoney}>
+          <span className={css.RowLabel}>Your money:</span>
+          <span>${player.money}</span>
+        </div>
       </div>
     );
   }

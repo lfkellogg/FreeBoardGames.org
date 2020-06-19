@@ -1,7 +1,9 @@
 import { Chain, Hotel, IG, Player } from './types';
 
-const NUM_COLUMNS = 12;
-const ROW_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+// const NUM_COLUMNS = 12;
+// const ROW_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+const NUM_COLUMNS = 3;
+const ROW_LETTERS = ['A', 'B', 'C'];
 
 export function setupHotels(): Hotel[][] {
   const hotels: Hotel[][] = [];
@@ -88,8 +90,12 @@ export function sizeOfChain(chain: Chain, hotels: Hotel[][]): number {
   return hotels.flat().filter((h) => h.chain === chain).length;
 }
 
-export function priceOfStock(chain: Chain, hotels: Hotel[][]): number {
+export function priceOfStock(chain: Chain, hotels: Hotel[][]): number | undefined {
   const size = sizeOfChain(chain, hotels);
+  if (size === 0) {
+    return undefined;
+  }
+
   let basePrice: number;
   if (size < 6) {
     basePrice = size * 100;
