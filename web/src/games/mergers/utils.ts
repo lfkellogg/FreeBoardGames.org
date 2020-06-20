@@ -1,9 +1,7 @@
 import { Chain, Hotel, IG, Player } from './types';
 
-// const NUM_COLUMNS = 12;
-// const ROW_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
-const NUM_COLUMNS = 3;
-const ROW_LETTERS = ['A', 'B', 'C'];
+const NUM_COLUMNS = 12;
+const ROW_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
 
 export function setupHotels(): Hotel[][] {
   const hotels: Hotel[][] = [];
@@ -159,4 +157,31 @@ export function roundToNearest100(x: number): number {
 
 export function roundToNearest2(x: number): number {
   return Math.floor(x / 2) * 2;
+}
+
+export function isUnplayable(G: IG, hotel: Hotel) {
+  if (hotel.hasBeenPlaced) {
+    return false;
+  }
+
+  return isPermanentlyUnplayable(G, hotel) || isTemporarilyUnplayable(G, hotel);
+}
+
+// a hotel is unplayable if it would merge two unmergeable chains
+export function isPermanentlyUnplayable(G: IG, hotel: Hotel) {
+  const adjacentChains = new Set(adjacentHotels(G, hotel).map((h) => h.chain));
+  const unmergeableChains = Array.from(adjacentChains).filter((c) => sizeOfChain(c, G.hotels) > 10);
+  return unmergeableChains.length > 1;
+}
+
+// a hotel is unplayable if it would form a new chain, but they are all on the board
+export function isTemporarilyUnplayable(G: IG, hotel: Hotel) {
+  const chainsOnBoard: Chain[] = Object.keys(Chain)
+    .map((key) => Chain[key])
+    .filter((chain) => !!G.hotels.flat().find((h) => h.chain === chain));
+  if (chainsOnBoard.length === 7) {
+    const adjacent = adjacentHotels(G, hotel);
+    return adjacent.length > 0 && adjacent.filter((h) => !!h.chain).length == 0;
+  }
+  return false;
 }

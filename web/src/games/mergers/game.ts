@@ -6,6 +6,8 @@ import {
   getColumn,
   getHotel,
   getRow,
+  isPermanentlyUnplayable,
+  isUnplayable,
   majorityBonus,
   minorityBonus,
   playersInMajority,
@@ -31,20 +33,22 @@ export function moveHotelToBoard(G: IG, hotel: Hotel) {
 
 export function placeHotel(G: IG, ctx: Ctx, id?: string) {
   if (!id) {
-    if (G.players[ctx.currentPlayer].hotels.length > 0) {
+    const playerHotels = G.players[ctx.playerID].hotels;
+    const hasPlayableHotels = !!playerHotels.find((h) => !isUnplayable(G, h));
+    if (hasPlayableHotels && playerHotels.length > 0) {
       return INVALID_MOVE;
     }
-    G.lastMove = `Player ${ctx.currentPlayer} doesn't have any hotels to play`;
+    G.lastMove = `Player ${ctx.playerID} doesn't have any playable hotels`;
     ctx.events.endStage();
     return;
   }
 
   const hotel: Hotel = getHotel(G, id);
-  if (hotel.drawnByPlayer !== ctx.currentPlayer || isUnplayable(G, hotel)) {
+  if (hotel.drawnByPlayer !== ctx.playerID || isUnplayable(G, hotel)) {
     return INVALID_MOVE;
   }
   moveHotelToBoard(G, hotel);
-  G.lastMove = `Player ${ctx.currentPlayer} plays ${id}`;
+  G.lastMove = `Player ${ctx.playerID} plays ${id}`;
   G.lastPlacedHotel = id;
 
   const adjacent = adjacentHotels(G, hotel);
@@ -92,7 +96,7 @@ export function chooseNewChain(G: IG, ctx: Ctx, chain: Chain) {
     G.availableStocks[chain]--;
     G.players[lastPlacedHotel.drawnByPlayer].stocks[chain]++;
   }
-  G.lastMove = `Player ${ctx.currentPlayer} chooses ${chain} as the new chain`;
+  G.lastMove = `Player ${ctx.playerID} chooses ${chain} as the new chain`;
   ctx.events.endStage();
 }
 
@@ -125,7 +129,7 @@ export function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
       }
       let stocksToBuy = Math.min(num, Math.min(G.availableStocks[chain], purchasesRemaining));
       if (!G.lastMove) {
-        G.lastMove += `Player ${ctx.currentPlayer} buys `;
+        G.lastMove += `Player ${ctx.playerID} buys `;
       } else {
         G.lastMove += ', ';
       }
@@ -141,7 +145,7 @@ export function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
   }
 
   if (!G.lastMove) {
-    G.lastMove = `Player ${ctx.currentPlayer} doesn't buy any stock`;
+    G.lastMove = `Player ${ctx.playerID} doesn't buy any stock`;
   }
 
   if (gameCanBeDeclaredOver(G)) {
@@ -152,7 +156,7 @@ export function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
 }
 
 export function drawHotels(G: IG, ctx: Ctx) {
-  const player: Player = G.players[ctx.currentPlayer];
+  const player: Player = G.players[ctx.playerID];
   const hotelsToDraw: number = 6 - player.hotels.length;
   for (let i = 0; i < hotelsToDraw; i++) {
     assignRandomHotel(G, ctx, player);
@@ -202,7 +206,7 @@ export function chooseSurvivingChain(G: IG, ctx, chain: Chain) {
   }
   G.survivingChain = chain;
   G.mergingChains.splice(G.mergingChains.indexOf(chain), 1);
-  G.lastMove = `Player ${ctx.currentPlayer} chooses ${chain} to survive the merger`;
+  G.lastMove = `Player ${ctx.playerID} chooses ${chain} to survive the merger`;
 }
 
 export function chooseChainToMerge(G: IG, ctx, chain: Chain) {
@@ -216,16 +220,16 @@ export function chooseChainToMerge(G: IG, ctx, chain: Chain) {
   // move the chain to the front of the array
   G.mergingChains.splice(G.mergingChains.indexOf(chain), 1);
   G.mergingChains.unshift(chain);
-  G.lastMove = `Player ${ctx.currentPlayer} chooses ${chain} to merge next`;
+  G.lastMove = `Player ${ctx.playerID} chooses ${chain} to merge next`;
 }
 
 // TODO: test this
 export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) {
-  const player = G.players[ctx.currentPlayer];
+  const player = G.players[ctx.playerID];
   const originalStockCount = player.stocks[G.chainToMerge];
 
   if (originalStockCount === 0) {
-    G.lastMove = `Player ${ctx.currentPlayer} has no ${G.chainToMerge} stock`;
+    G.lastMove = `Player ${ctx.playerID} has no ${G.chainToMerge} stock`;
   } else {
     G.lastMove = '';
   }
@@ -239,7 +243,7 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
   toSell = Math.min(toSell, originalStockCount);
 
   if (toSwap > 0) {
-    G.lastMove = `Player ${ctx.currentPlayer} swaps ${toSwap} ${G.chainToMerge} for ${toSwap / 2} ${G.survivingChain}`;
+    G.lastMove = `Player ${ctx.playerID} swaps ${toSwap} ${G.chainToMerge} for ${toSwap / 2} ${G.survivingChain}`;
   }
 
   // player gives away N stocks of the merged chan
@@ -255,7 +259,7 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
     if (G.lastMove) {
       G.lastMove += ', ';
     } else {
-      G.lastMove += `Player ${ctx.currentPlayer} `;
+      G.lastMove += `Player ${ctx.playerID} `;
     }
     G.lastMove += `sells ${toSell} ${G.chainToMerge}`;
   }
@@ -265,7 +269,7 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
 
   if (originalStockCount > 0 && player.stocks[G.chainToMerge] > 0) {
     if (!G.lastMove) {
-      G.lastMove += `Player ${ctx.currentPlayer} `;
+      G.lastMove += `Player ${ctx.playerID} `;
     } else {
       G.lastMove += ', ';
     }
@@ -273,36 +277,9 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
   }
 }
 
-export function isUnplayable(G: IG, hotel: Hotel) {
-  if (hotel.hasBeenPlaced) {
-    return false;
-  }
-
-  return isPermanentlyUnplayable(G, hotel) || isTemporarilyUnplayable(G, hotel);
-}
-
-export function isPermanentlyUnplayable(G: IG, hotel: Hotel) {
-  // a hotel is unplayable if it would merge two unmergeable chains
-  const adjacentChains = adjacentHotels(G, hotel).map((h) => h.chain);
-  const unmergeableChains = new Set(adjacentChains.filter((c) => sizeOfChain(c, G.hotels) > 10));
-  return unmergeableChains.size > 1;
-}
-
-export function isTemporarilyUnplayable(G: IG, hotel: Hotel) {
-  // a hotel is unplayable if it would form a new chain, but they are all on the board
-  const chainsOnBoard: Chain[] = Object.keys(Chain)
-    .map((key) => Chain[key])
-    .filter((chain) => G.hotels.flat().find((h) => h.chain === chain));
-  if (chainsOnBoard.length === 7) {
-    const adjacentChains = adjacentHotels(G, hotel).map((h) => h.chain);
-    return adjacentChains.find((chain) => chain === undefined);
-  }
-  return false;
-}
-
 export function declareGameOver(G: IG, ctx: Ctx, isGameOver: boolean) {
   if (isGameOver) {
-    G.lastMove = `Player ${ctx.currentPlayer} declares the game over`;
+    G.lastMove = `Player ${ctx.playerID} declares the game over`;
     // award bonuses for remaining chains
     const chains = new Set<Chain>(
       G.hotels

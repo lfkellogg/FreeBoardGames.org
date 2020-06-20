@@ -1,11 +1,12 @@
 import * as React from 'react';
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
+import StarIcon from '@material-ui/icons/Star';
 import { IGameArgs } from 'gamesShared/definitions/game';
 import { GameLayout } from 'gamesShared/components/fbg/GameLayout';
 import { Ctx } from 'boardgame.io';
 import { Chain, Hotel, IG } from './types';
-import { priceOfStock, sizeOfChain } from './utils';
+import { isUnplayable, priceOfStock, sizeOfChain } from './utils';
 import css from './Board.css';
 
 interface IBoardProps {
@@ -34,6 +35,25 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       stocksToBuy: {},
     };
   }
+
+  playerID() {
+    // TODO: will this be set in multiplayer mode?
+    // return this.props.playerID;
+    return '0';
+  }
+
+  playerIndex() {
+    return this.props.ctx.playOrder.indexOf(this.playerID());
+  }
+
+  playerState() {
+    return this.props.G.players[this.playerID()];
+  }
+
+  playerMetadata() {
+    return this.props.gameArgs.players[this.playerID()];
+  }
+
   getClassName(hotel: Hotel) {
     if (!hotel.hasBeenPlaced) {
       return hotel.drawnByPlayer === this.props.ctx.currentPlayer ? css.InRack : css.Empty;
@@ -46,7 +66,11 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     return css[hotel.chain];
   }
   renderHotel(chainTiles: {}, hotel: Hotel) {
-    const hoverClass = this.state.hoveredHotel === hotel.id ? css.Hover : '';
+    const isHovered = this.state.hoveredHotel === hotel.id;
+    const placingHotel = this.props.ctx.activePlayers[this.playerIndex()] === 'placeHotelStage';
+    const hoverClass = placingHotel && isHovered ? css.Hover : '';
+    const isLastPlaced = this.props.G.lastPlacedHotel === hotel.id;
+    const lastPlacedLabel = isLastPlaced ? <StarIcon style={{ fontSize: '1.25em' }}></StarIcon> : '';
     return (
       <td key={hotel.id}>
         <div
@@ -55,7 +79,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
           onMouseEnter={() => this.setState({ hoveredHotel: hotel.id })}
           onMouseLeave={() => this.setState({ hoveredHotel: undefined })}
         >
-          <div className={`${css.LabelContainer}`}>{chainTiles[hotel.id]}</div>
+          <div className={css.LabelContainer}>{lastPlacedLabel || chainTiles[hotel.id]}</div>
         </div>
       </td>
     );
@@ -89,7 +113,9 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     const chainTiles = {};
     Object.keys(Chain).forEach((key) => {
       const chain = Chain[key];
-      const firstHotel = this.props.G.hotels.flat().find((h) => h.chain === chain);
+      const firstHotel = this.props.G.hotels
+        .flat()
+        .find((h) => h.chain === chain && h.id !== this.props.G.lastPlacedHotel);
       if (firstHotel) {
         chainTiles[firstHotel.id] = chain[0]; // first letter of chain
       }
@@ -312,9 +338,6 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     );
   }
   renderActions() {
-    // const playerID = this.props.playerID;
-    const playerID = '0';
-    const playerIndex = this.props.ctx.playOrder.indexOf(playerID);
     let content;
     if (this.props.ctx.gameover) {
       const { winner, winners, scores } = this.props.ctx.gameover;
@@ -327,14 +350,15 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       message += `Scores: ${scores.map((s) => `${this.props.gameArgs.players[s.id].name} - $${s.money}`).join(', ')}`;
       content = <div>{message}</div>;
     } else if (this.props.ctx.phase === 'buildingPhase') {
-      const stage = this.props.ctx.activePlayers[playerIndex];
+      const stage = this.props.ctx.activePlayers[this.playerIndex()];
       //console.log('stage: ', stage);
       switch (stage) {
         case 'placeHotelStage':
-          if (this.props.G.players[this.props.ctx.currentPlayer].hotels.length === 0) {
-            content = this.renderButton('Continue (you have no hotels to play)', () => this.props.moves.placeHotel());
+          const hasPlayableHotel = !!this.playerState().hotels.find((h) => !isUnplayable(this.props.G, h));
+          if (!hasPlayableHotel) {
+            content = this.renderButton('Continue (you have no playable hotels)', () => this.props.moves.placeHotel());
           } else {
-            content = <div>Click a yellow square above to place hotel</div>;
+            content = <div>Click an outlined square above to place hotel</div>;
           }
           break;
         case 'chooseNewChainStage':
@@ -352,7 +376,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
         default:
           break;
       }
-    } else if (this.props.ctx.currentPlayer === playerID) {
+    } else if (this.props.ctx.currentPlayer === this.playerID()) {
       switch (this.props.ctx.phase) {
         case 'chooseSurvivingChainPhase':
           content = this.renderChooseSurvivingChain();
@@ -381,10 +405,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     );
   }
   renderPlayerStatus() {
-    // TODO: will this be set in multiplayer mode?
-    // console.log('playerID', this.props.gameArgs.playerID);
-    const playerID = '0'; // this.props.playerID;
-    const player = this.props.G.players[playerID];
+    const player = this.playerState();
     return (
       <div className={css.PlayerStatus}>
         {/* <div className={css.Rack}>
