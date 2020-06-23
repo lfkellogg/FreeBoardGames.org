@@ -37,9 +37,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
   }
 
   playerID() {
-    // TODO: will this be set in multiplayer mode?
-    // return this.props.playerID;
-    return '0';
+    return this.props.playerID;
   }
 
   playerIndex() {
@@ -56,7 +54,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
 
   getClassName(hotel: Hotel) {
     if (!hotel.hasBeenPlaced) {
-      return hotel.drawnByPlayer === this.props.ctx.currentPlayer ? css.InRack : css.Empty;
+      return hotel.drawnByPlayer === this.playerID() ? css.InRack : css.Empty;
     }
 
     if (!hotel.chain) {
@@ -67,7 +65,8 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
   }
   renderHotel(chainTiles: {}, hotel: Hotel) {
     const isHovered = this.state.hoveredHotel === hotel.id;
-    const placingHotel = this.props.ctx.activePlayers[this.playerIndex()] === 'placeHotelStage';
+    const placingHotel =
+      this.props.ctx.activePlayers && this.props.ctx.activePlayers[this.playerIndex()] === 'placeHotelStage';
     const hoverClass = placingHotel && isHovered ? css.Hover : '';
     const isLastPlaced = this.props.G.lastPlacedHotel === hotel.id;
     const lastPlacedLabel = isLastPlaced ? <StarIcon style={{ fontSize: '1.25em' }}></StarIcon> : '';
