@@ -151,11 +151,11 @@ export function minorityBonus(G: IG, chain: Chain): number {
   return priceOfStock(chain, G.hotels) * 5;
 }
 
-export function roundToNearest100(x: number): number {
-  return Math.floor(x / 100) * 100;
+export function roundUpToNearest100(x: number): number {
+  return Math.ceiling(x / 100) * 100;
 }
 
-export function roundToNearest2(x: number): number {
+export function roundDownToNearest2(x: number): number {
   return Math.floor(x / 2) * 2;
 }
 
@@ -168,9 +168,13 @@ export function isUnplayable(G: IG, hotel: Hotel) {
 }
 
 // a hotel is unplayable if it would merge two unmergeable chains
-export function isPermanentlyUnplayable(G: IG, hotel: Hotel) {
-  const adjacentChains = new Set(adjacentHotels(G, hotel).map((h) => h.chain));
-  const unmergeableChains = Array.from(adjacentChains).filter((c) => sizeOfChain(c, G.hotels) > 10);
+export function isPermanentlyUnplayable(G: IG, hotel: Hotel, maxMergeableSize: number = 10) {
+  const adjacentChains = new Set(
+    adjacentHotels(G, hotel)
+      .map((h) => h.chain)
+      .filter((c) => !!c),
+  );
+  const unmergeableChains = Array.from(adjacentChains).filter((c) => sizeOfChain(c, G.hotels) > maxMergeableSize);
   return unmergeableChains.length > 1;
 }
 
@@ -181,7 +185,7 @@ export function isTemporarilyUnplayable(G: IG, hotel: Hotel) {
     .filter((chain) => !!G.hotels.flat().find((h) => h.chain === chain));
   if (chainsOnBoard.length === 7) {
     const adjacent = adjacentHotels(G, hotel);
-    return adjacent.length > 0 && adjacent.filter((h) => !!h.chain).length == 0;
+    return adjacent.length > 0 && adjacent.filter((h) => !!h.chain).length === 0;
   }
   return false;
 }

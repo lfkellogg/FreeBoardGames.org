@@ -63,6 +63,14 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
 
     return css[hotel.chain];
   }
+
+  parseNumber(text: string): number {
+    if (!text) {
+      return 0;
+    }
+    return parseInt(text.replace(/\D/g, ''), 10);
+  }
+
   renderHotel(chainTiles: {}, hotel: Hotel) {
     const isHovered = this.state.hoveredHotel === hotel.id;
     const placingHotel =
@@ -218,12 +226,14 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
         <TextField
           className={css.BuyStockInput}
           placeholder="#"
-          value={this.state.stocksToBuy[chain] || ''}
+          value={this.state.stocksToBuy[chain] || '0'}
           onChange={(e) => {
+            const value = parseNumber(e.target.value);
+            const toBuy = Math.min(value, this.props.G.availableStocks[chain]);
             this.setState({
               stocksToBuy: {
                 ...this.state.stocksToBuy,
-                [chain]: e.target.value || 0,
+                [chain]: toBuy,
               },
             });
           }}
@@ -247,7 +257,6 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
           variant="contained"
           color="primary"
           onClick={() => {
-            // this seems to crash right now
             this.props.moves.buyStock(this.state.stocksToBuy);
             this.setState({ stocksToBuy: {} });
           }}

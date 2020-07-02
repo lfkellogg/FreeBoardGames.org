@@ -13,8 +13,8 @@ import {
   playersInMajority,
   playersInMinority,
   priceOfStock,
-  roundToNearest100,
-  roundToNearest2,
+  roundUpToNearest100,
+  roundDownToNearest2,
   setupAvailableStocks,
   setupHotels,
   setupPlayers,
@@ -115,7 +115,7 @@ export function gameCanBeDeclaredOver(G: IG) {
 export function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
   G.lastMove = '';
   if (order) {
-    const player = G.players[ctx.playOrderPos];
+    const player = G.players[ctx.playerID];
     let purchasesRemaining = 3;
     Object.keys(Chain).forEach((key) => {
       const chain = Chain[key];
@@ -237,7 +237,7 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
   let toSwap = swap || 0;
   toSwap = Math.min(toSwap, originalStockCount);
   toSwap = Math.min(toSwap, G.availableStocks[G.survivingChain] * 2);
-  toSwap = roundToNearest2(toSwap);
+  toSwap = roundDownToNearest2(toSwap);
 
   let toSell = sell || 0;
   toSell = Math.min(toSell, originalStockCount);
@@ -344,14 +344,14 @@ export function awardBonuses(G: IG, chain: Chain) {
     } else if (minority.length > 1) {
       // split minority bonus between em
       const total = minorityBonus(G, chain);
-      const each = roundToNearest100(total / minority.length);
+      const each = roundUpToNearest100(total / minority.length);
       minority.forEach((p) => (p.money += each));
       // console.log(`${minority.map(p => p.id)} all get ${each}`);
     }
   } else if (majority.length > 1) {
     // split both bonuses between some number of folks
     const total = majorityBonus(G, chain) + minorityBonus(G, chain);
-    const each = roundToNearest100(total / majority.length);
+    const each = roundUpToNearest100(total / majority.length);
     majority.forEach((p) => (p.money += each));
     // console.log(`${majority.map(p => p.id)} all get ${each}`);
   }
@@ -380,6 +380,18 @@ export function autosetChainToMerge(G: IG) {
       sizeOfChain(G.mergingChains[0], G.hotels) !== sizeOfChain(G.mergingChains[1], G.hotels))
   ) {
     G.chainToMerge = G.mergingChains[0];
+  }
+}
+
+export function mergerPhaseNextTurn(G: IG, ctx: Ctx) {
+  let nextPos = (ctx.playOrderPos + 1) % ctx.numPlayers;
+  // go through each player once until we get back to the current player
+  while (nextPos !== ctx.playOrder.indexOf(getHotel(G, G.lastPlacedHotel).drawnByPlayer)) {
+    // only stop at a player if they have stock in the merging chain
+    if (G.players[ctx.playOrder[nextPos]].stocks[G.chainToMerge] > 0) {
+      return nextPos;
+    }
+    nextPos = (nextPos + 1) % ctx.numPlayers;
   }
 }
 
@@ -517,9 +529,12 @@ export const MergersGame: Game<IG> = {
           first: (G: IG, ctx: Ctx) => ctx.playOrderPos,
           next: (G: IG, ctx: Ctx) => {
             // go through each player once until we get back to the current player
-            const nextPos = (ctx.playOrderPos + 1) % ctx.numPlayers;
-            if (nextPos !== ctx.playOrder.indexOf(getHotel(G, G.lastPlacedHotel).drawnByPlayer)) {
-              return nextPos;
+            let nextPos = (ctx.playOrderPos + 1) % ctx.numPlayers;
+            while (nextPos !== ctx.playOrder.indexOf(getHotel(G, G.lastPlacedHotel).drawnByPlayer)) {
+              if (G.players[ctx.playOrder[nextPos]].stocks[G.chainToMerge] > 0) {
+                return nextPos;
+              }
+              nextPos = (ctx.playOrderPos + 1) % ctx.numPlayers;
             }
           },
         },

@@ -1,7 +1,14 @@
 import { Ctx } from 'boardgame.io';
 import { Client } from 'boardgame.io/client';
 import { INVALID_MOVE } from 'boardgame.io/core';
-import { autosetChainToMerge, awardBonuses, chooseChainToMerge, chooseSurvivingChain, MergersGame } from './game';
+import {
+  autosetChainToMerge,
+  awardBonuses,
+  chooseChainToMerge,
+  chooseSurvivingChain,
+  mergerPhaseNextTurn,
+  MergersGame,
+} from './game';
 import { Chain, Hotel, IG } from './types';
 import {
   setupPlayers,
@@ -392,6 +399,81 @@ describe('autosetChainToMerge', () => {
     autosetChainToMerge(G);
     expect(G.chainToMerge).toBeUndefined();
     expect(G.mergingChains).toEqual([Chain.American, Chain.Continental]);
+  });
+});
+
+describe('mergerPhaseNextTurn', () => {
+  it('wraps around to the beginning of the order', () => {
+    const G = {
+      lastPlacedHotel: '1-A',
+      hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
+      chainToMerge: Chain.Tower,
+      players: {
+        Player1: { stocks: { [Chain.Tower]: 1 } },
+        Player2: { stocks: { [Chain.Tower]: 0 } },
+        Player3: { stocks: { [Chain.Tower]: 0 } },
+        Player4: { stocks: { [Chain.Tower]: 0 } },
+      },
+    };
+    const ctx = {
+      playOrderPos: 3,
+      numPlayers: 4,
+      playOrder: ['Player1', 'Player2', 'Player3', 'Player4'],
+    };
+    expect(mergerPhaseNextTurn(G, ctx)).toEqual(0);
+  });
+
+  it('skips to the next player with stock', () => {
+    const G = {
+      lastPlacedHotel: '1-A',
+      hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
+      chainToMerge: Chain.Tower,
+      players: {
+        Player1: { stocks: { [Chain.Tower]: 0 } },
+        Player2: { stocks: { [Chain.Tower]: 1 } },
+        Player3: { stocks: { [Chain.Tower]: 0 } },
+        Player4: { stocks: { [Chain.Tower]: 0 } },
+      },
+    };
+    const ctx = {
+      playOrderPos: 3,
+      numPlayers: 4,
+      playOrder: ['Player1', 'Player2', 'Player3', 'Player4'],
+    };
+    expect(mergerPhaseNextTurn(G, ctx)).toEqual(1);
+  });
+
+  it('stops if the next player caused the merger', () => {
+    const G = {
+      lastPlacedHotel: '1-A',
+      hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
+    };
+    const ctx = {
+      playOrderPos: 1,
+      numPlayers: 4,
+      playOrder: ['Player1', 'Player2', 'Player3', 'Player4'],
+    };
+    expect(mergerPhaseNextTurn(G, ctx)).toBeUndefined();
+  });
+
+  it('returns undefined if no one else has any stock', () => {
+    const G = {
+      lastPlacedHotel: '1-A',
+      hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
+      chainToMerge: Chain.Tower,
+      players: {
+        Player1: { stocks: { [Chain.Tower]: 0 } },
+        Player2: { stocks: { [Chain.Tower]: 0 } },
+        Player3: { stocks: { [Chain.Tower]: 1 } },
+        Player4: { stocks: { [Chain.Tower]: 0 } },
+      },
+    };
+    const ctx = {
+      playOrderPos: 2,
+      numPlayers: 4,
+      playOrder: ['Player1', 'Player2', 'Player3', 'Player4'],
+    };
+    expect(mergerPhaseNextTurn(G, ctx)).toBeUndefined();
   });
 });
 // it('should declare player 1 as the winner', () => {
