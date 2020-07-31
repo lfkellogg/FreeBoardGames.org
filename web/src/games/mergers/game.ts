@@ -527,16 +527,7 @@ export const MergersGame: Game<IG> = {
       turn: {
         order: {
           first: (G: IG, ctx: Ctx) => ctx.playOrderPos,
-          next: (G: IG, ctx: Ctx) => {
-            // go through each player once until we get back to the current player
-            let nextPos = (ctx.playOrderPos + 1) % ctx.numPlayers;
-            while (nextPos !== ctx.playOrder.indexOf(getHotel(G, G.lastPlacedHotel).drawnByPlayer)) {
-              if (G.players[ctx.playOrder[nextPos]].stocks[G.chainToMerge] > 0) {
-                return nextPos;
-              }
-              nextPos = (ctx.playOrderPos + 1) % ctx.numPlayers;
-            }
-          },
+          next: mergerPhaseNextTurn,
         },
         moveLimit: 1,
       },

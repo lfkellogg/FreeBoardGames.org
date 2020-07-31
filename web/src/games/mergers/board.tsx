@@ -228,7 +228,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
           placeholder="#"
           value={this.state.stocksToBuy[chain] || '0'}
           onChange={(e) => {
-            const value = parseNumber(e.target.value);
+            const value = this.parseNumber(e.target.value);
             const toBuy = Math.min(value, this.props.G.availableStocks[chain]);
             this.setState({
               stocksToBuy: {
