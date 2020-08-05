@@ -48,7 +48,6 @@ export function placeHotel(G: IG, ctx: Ctx, id?: string) {
     return INVALID_MOVE;
   }
   moveHotelToBoard(G, hotel);
-  G.lastMove = `Player ${ctx.playerID} plays ${id}`;
   G.lastPlacedHotel = id;
 
   const adjacent = adjacentHotels(G, hotel);

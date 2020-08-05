@@ -209,9 +209,9 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     return (
       <div className={css.WrapRow}>
         <div className={css.RowLabel}>Choose the new chain:</div>
-        {Object.keys(Chain).map((key) =>
-          this.renderStockLabel(Chain[key], () => this.props.moves.chooseNewChain(Chain[key])),
-        )}
+        {Object.keys(Chain)
+          .filter((key) => sizeOfChain(Chain[key], this.props.G.hotels) === 0)
+          .map((key) => this.renderStockLabel(Chain[key], () => this.props.moves.chooseNewChain(Chain[key])))}
       </div>
     );
   }
@@ -220,6 +220,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     if (stockPrice === undefined) {
       return;
     }
+    // TODO: don't modify textfield value, instead use validation to give feedback
     return (
       <div key={`stock-to-buy-${chain}`} className={`${css.StockToBuy} ${css.WrapRow}`}>
         {this.renderStockLabel(chain)}
