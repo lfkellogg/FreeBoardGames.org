@@ -10,6 +10,11 @@ div {
   font-size: 1.25em;
 }
 
+.ErrorText {
+  color: #f44336; /* material red 500 */
+  font-size: 0.75em;
+}
+
 .AvailableStockAndPrice {
   display: flex;
   flex-direction: column;
@@ -41,7 +46,11 @@ div {
 }
 
 .Player.CurrentTurn {
-  border-color: black; /* material red 700 */
+  border-color: black;
+}
+
+.Player.YourTurn {
+  border-color: #76ff03; /* material light green A400 */
 }
 
 .RowLabel {
@@ -81,7 +90,7 @@ div {
 }
 
 .Actions.YourTurn {
-  border-color: red;
+  border-color: #76ff03; /* material light green A400 */
 }
 
 .PlayerStocks {

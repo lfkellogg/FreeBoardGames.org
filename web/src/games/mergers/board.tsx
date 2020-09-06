@@ -24,6 +24,10 @@ interface IBoardState {
   hoveredHotel?: string;
 }
 
+// TODO:
+//  - show card w/ prices and bonuses
+//  - animations
+//  - fix layout on small screens
 export class Board extends React.Component<IBoardProps, IBoardState> {
   constructor(props) {
     super(props);
@@ -230,7 +234,14 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       <div className={css.WrapRow}>
         <div className={css.RowLabel}>Current turn:</div>
         {this.props.gameArgs.players.map((player) => {
-          const turnClass = this.props.ctx.currentPlayer === `${player.playerID}` ? css.CurrentTurn : '';
+          let turnClass = '';
+          if (this.props.ctx.currentPlayer === `${player.playerID}`) {
+            if (this.props.ctx.currentPlayer === this.playerID()) {
+              turnClass = css.YourTurn;
+            } else {
+              turnClass = css.CurrentTurn;
+            }
+          }
           return (
             <div key={player.playerID} className={`${css.Player} ${turnClass}`}>
               {player.name}
@@ -308,26 +319,29 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
   }
 
   renderBuyStock() {
-    const stockCountsAreInvalid = !!this.validateStocksToBuy();
+    const errorMsg = this.validateStocksToBuy();
     return (
-      <div className={css.WrapRow}>
-        <div className={css.RowLabel}>Buy up to 3 stocks:</div>
-        {Object.keys(Chain).map((key) => this.renderStockToBuy(Chain[key]))}
-        <Button
-          className="BuyStockButton"
-          disabled={stockCountsAreInvalid}
-          variant="contained"
-          color="primary"
-          onClick={() => {
-            if (stockCountsAreInvalid) {
-              return;
-            }
-            this.props.moves.buyStock(this.parseStocksToBuy());
-            this.setState({ stocksToBuy: fillStockMap('') });
-          }}
-        >
-          Buy
-        </Button>
+      <div>
+        <div className={css.WrapRow}>
+          <div className={css.RowLabel}>Buy up to 3 stocks:</div>
+          {Object.keys(Chain).map((key) => this.renderStockToBuy(Chain[key]))}
+          <Button
+            className="BuyStockButton"
+            disabled={!!errorMsg}
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              if (!!errorMsg) {
+                return;
+              }
+              this.props.moves.buyStock(this.parseStocksToBuy());
+              this.setState({ stocksToBuy: fillStockMap('') });
+            }}
+          >
+            Buy
+          </Button>
+        </div>
+        <div className={css.ErrorText}>{errorMsg}</div>
       </div>
     );
   }
