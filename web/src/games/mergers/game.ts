@@ -15,9 +15,7 @@ import {
   priceOfStock,
   roundUpToNearest100,
   roundDownToNearest2,
-  setupAvailableStocks,
-  setupHotels,
-  setupPlayers,
+  setupInitialState,
   sizeOfChain,
 } from './utils';
 
@@ -398,14 +396,7 @@ export const MergersGame: Game<IG> = {
   name: 'mergers',
 
   setup: (ctx: Ctx) => {
-    const hotels = setupHotels();
-
-    const G: IG = {
-      hotels,
-      players: setupPlayers(ctx.numPlayers),
-      availableStocks: setupAvailableStocks(),
-      lastMove: '',
-    };
+    const G: IG = setupInitialState(ctx.numPlayers);
 
     setupInitialDrawing(G, ctx);
 

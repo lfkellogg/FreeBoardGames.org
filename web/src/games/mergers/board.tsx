@@ -6,7 +6,7 @@ import { IGameArgs } from 'gamesShared/definitions/game';
 import { GameLayout } from 'gamesShared/components/fbg/GameLayout';
 import { Ctx } from 'boardgame.io';
 import { Chain, Hotel, IG } from './types';
-import { isUnplayable, priceOfStock, sizeOfChain } from './utils';
+import { fillStockMap, isUnplayable, priceOfStock, sizeOfChain } from './utils';
 import css from './Board.css';
 
 interface IBoardProps {
@@ -18,7 +18,7 @@ interface IBoardProps {
 }
 
 interface IBoardState {
-  stocksToBuy: Partial<Record<Chain, number>>;
+  stocksToBuy: Record<Chain, string>;
   stocksToSwap?: number;
   stocksToSell?: number;
   hoveredHotel?: string;
@@ -32,7 +32,15 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     this.renderBoard = this.renderBoard.bind(this);
     this.renderHotelInRack = this.renderHotelInRack.bind(this);
     this.state = {
-      stocksToBuy: {},
+      stocksToBuy: {
+        Tower: '',
+        Luxor: '',
+        Worldwide: '',
+        American: '',
+        Festival: '',
+        Continental: '',
+        Imperial: '',
+      },
     };
   }
 
@@ -68,7 +76,44 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     if (!text) {
       return 0;
     }
-    return parseInt(text.replace(/\D/g, ''), 10);
+    return Number(text);
+  }
+
+  parseStocksToBuy(): Partial<Record<Chain, number>> {
+    const parsed = {};
+    for (const key of Object.keys(this.state.stocksToBuy)) {
+      parsed[key] = this.parseNumber(this.state.stocksToBuy[key]);
+    }
+    return parsed;
+  }
+
+  validateStocksToBuy(): string {
+    const parsed = this.parseStocksToBuy();
+    let totalCount = 0;
+    let totalPrice = 0;
+    for (const key of Object.keys(parsed)) {
+      const chain = Chain[key];
+      const numToBuy = parsed[chain];
+      if (numToBuy === 0) {
+        continue;
+      }
+      if (Number.isNaN(numToBuy)) {
+        return 'Please enter numbers only';
+      }
+      const numAvailable = this.props.G.availableStocks[chain];
+      if (numToBuy > numAvailable) {
+        return `There are only ${numAvailable} ${chain} available`;
+      }
+      totalCount += numToBuy;
+      totalPrice += numToBuy * priceOfStock(chain, this.props.G.hotels);
+    }
+    if (totalCount > 3) {
+      return 'You  may only buy up to 3 stocks per turn';
+    }
+    if (totalPrice > this.playerState().money) {
+      return 'You don\'t have enough money';
+    }
+    return '';
   }
 
   renderHotel(chainTiles: {}, hotel: Hotel) {
@@ -91,6 +136,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </td>
     );
   }
+
   renderHotelRow(chainTiles: {}, row: Hotel[], i: number) {
     return (
       <tr key={`hotel-row-${i}`} className={css.HotelRow}>
@@ -103,6 +149,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </tr>
     );
   }
+
   renderColumnHeaders() {
     const headers = [];
     // empty header for the top left corner
@@ -116,9 +163,10 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     }
     return <tr>{headers}</tr>;
   }
+
   renderBoard() {
     const chainTiles = {};
-    Object.keys(Chain).forEach((key) => {
+    for (const key of Object.keys(Chain)) {
       const chain = Chain[key];
       const firstHotel = this.props.G.hotels
         .flat()
@@ -126,7 +174,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       if (firstHotel) {
         chainTiles[firstHotel.id] = chain[0]; // first letter of chain
       }
-    });
+    }
     return (
       <div className={css.Board}>
         <table>
@@ -138,6 +186,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   renderHotelInRack(hotel: Hotel) {
     const hoverClass = this.state.hoveredHotel === hotel.id ? css.Hover : '';
     return (
@@ -153,6 +202,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   renderStockLabel(chain: Chain, onClick?: () => void) {
     return (
       <div
@@ -164,6 +214,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   renderStock(chain: Chain, count: number, hideEmpty?: boolean) {
     const hiddenClass = hideEmpty && count === 0 ? css.HiddenStock : '';
     return (
@@ -173,6 +224,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   renderPlayers() {
     return (
       <div className={css.WrapRow}>
@@ -188,6 +240,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   renderAvailableStock(chain: Chain) {
     const stockPrice = priceOfStock(chain, this.props.G.hotels);
     return (
@@ -197,6 +250,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   renderAvailableStocks() {
     return (
       <div className={css.PlayerStocks}>
@@ -205,6 +259,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   renderChooseChain() {
     return (
       <div className={css.WrapRow}>
@@ -215,26 +270,27 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   renderStockToBuy(chain: Chain) {
     const stockPrice = priceOfStock(chain, this.props.G.hotels);
     if (stockPrice === undefined) {
       return;
     }
-    // TODO: don't modify textfield value, instead use validation to give feedback
+
     return (
       <div key={`stock-to-buy-${chain}`} className={`${css.StockToBuy} ${css.WrapRow}`}>
         {this.renderStockLabel(chain)}
         <TextField
+          name={`stock-to-buy-input-${chain}`}
           className={css.BuyStockInput}
           placeholder="#"
-          value={this.state.stocksToBuy[chain] || '0'}
+          value={this.state.stocksToBuy[chain]}
+          error={!!this.validateStocksToBuy()}
           onChange={(e) => {
-            const value = this.parseNumber(e.target.value);
-            const toBuy = Math.min(value, this.props.G.availableStocks[chain]);
             this.setState({
               stocksToBuy: {
                 ...this.state.stocksToBuy,
-                [chain]: toBuy,
+                [chain]: e.target.value || '',
               },
             });
           }}
@@ -242,6 +298,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   renderButton(text: string, onClick: () => void) {
     return (
       <Button variant="contained" color="primary" onClick={onClick}>
@@ -249,17 +306,24 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </Button>
     );
   }
+
   renderBuyStock() {
+    const stockCountsAreInvalid = !!this.validateStocksToBuy();
     return (
       <div className={css.WrapRow}>
         <div className={css.RowLabel}>Buy up to 3 stocks:</div>
         {Object.keys(Chain).map((key) => this.renderStockToBuy(Chain[key]))}
         <Button
+          className="BuyStockButton"
+          disabled={stockCountsAreInvalid}
           variant="contained"
           color="primary"
           onClick={() => {
-            this.props.moves.buyStock(this.state.stocksToBuy);
-            this.setState({ stocksToBuy: {} });
+            if (stockCountsAreInvalid) {
+              return;
+            }
+            this.props.moves.buyStock(this.parseStocksToBuy());
+            this.setState({ stocksToBuy: fillStockMap('') });
           }}
         >
           Buy
@@ -267,6 +331,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   renderGameOverChoice() {
     return (
       <div className={css.WrapRow}>
@@ -276,6 +341,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   renderBreakMergerTieChain(message: string, move: string) {
     const chainSizes = this.props.G.mergingChains.map((c) => ({ chain: c, size: sizeOfChain(c, this.props.G.hotels) }));
     const biggestChainSize = chainSizes[0].size;
@@ -289,15 +355,18 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   renderChooseSurvivingChain() {
     return this.renderBreakMergerTieChain(
       'There is a tie. Choose the chain that will survive the merger:',
       'chooseSurvivingChain',
     );
   }
+
   renderChooseChainToMerge() {
     return this.renderBreakMergerTieChain('There is a tie. Choose the chain to merge next:', 'chooseChainToMerge');
   }
+
   renderSwapAndSellStock() {
     return (
       <div className={css.WrapRow}>
@@ -336,7 +405,6 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
           variant="contained"
           color="primary"
           onClick={() => {
-            // this seems to crash right now
             this.props.moves.swapAndSellStock(this.state.stocksToSwap || 0, this.state.stocksToSell || 0);
             this.setState({ stocksToSwap: 0, stocksToSell: 0 });
           }}
@@ -346,6 +414,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   renderActions() {
     let content;
     if (this.props.ctx.gameover) {
@@ -400,19 +469,12 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
           break;
       }
     }
-    // if buildingPhase
-    // check stage
-    // if me
-    // give me the moves for the stage: else // else
-    // check turn
-    // if me
-    // if chooseSurvivingChainPhase...
-    // if chooseChainToMergePhase...
-    // if mergerPhase... swapAndSellStock
+
     return (
       <div className={`${css.Actions} ${css.WrapRow} ${content ? css.YourTurn : ''}`}>{content || 'Not your turn'}</div>
     );
   }
+
   renderPlayerStatus() {
     const player = this.playerState();
     return (
@@ -431,12 +493,13 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   renderLastMove() {
     let message: string;
     message = this.props.G.lastMove;
-    this.props.gameArgs.players.forEach((p) => {
+    for (const p of this.props.gameArgs.players) {
       message = message.replace(new RegExp(`Player ${p.playerID}`, 'g'), p.name);
-    });
+    }
     return (
       <div className={css.WrapRow}>
         <div className={css.RowLabel}>Last move:</div>
@@ -444,6 +507,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       </div>
     );
   }
+
   render() {
     // console.log('rendering with props', this.props);
     // console.log('rendering with state', this.state);

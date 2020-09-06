@@ -10,13 +10,7 @@ import {
   MergersGame,
 } from './game';
 import { Chain, Hotel, IG } from './types';
-import {
-  setupPlayers,
-  setupAvailableStocks,
-  playersInDescOrderOfStock,
-  playersInMajority,
-  playersInMinority,
-} from './utils';
+import { fillStockMap, setupPlayers, playersInDescOrderOfStock, playersInMajority, playersInMinority } from './utils';
 
 // TODO:
 // - test mergers
@@ -48,7 +42,7 @@ function getTestClient(numPlayers: number = 2, hotels?: Hotel[][]): Client {
       const G: IG = {
         hotels: hotels || setupTestHotels(),
         players: setupPlayers(ctx.numPlayers),
-        availableStocks: setupAvailableStocks(),
+        availableStocks: fillStockMap(25),
       };
 
       ctx.events.setPhase('buildingPhase');
@@ -404,7 +398,7 @@ describe('autosetChainToMerge', () => {
 
 describe('mergerPhaseNextTurn', () => {
   it('wraps around to the beginning of the order', () => {
-    const G = {
+    const G: IG = {
       lastPlacedHotel: '1-A',
       hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
       chainToMerge: Chain.Tower,
@@ -415,10 +409,14 @@ describe('mergerPhaseNextTurn', () => {
         Player4: { stocks: { [Chain.Tower]: 0 } },
       },
     };
-    const ctx = {
+    const ctx: Ctx = {
       playOrderPos: 3,
       numPlayers: 4,
       playOrder: ['Player1', 'Player2', 'Player3', 'Player4'],
+      activePlayers: {},
+      currentPlayer: '3',
+      turn: 0,
+      phase: 'mergerPhase',
     };
     expect(mergerPhaseNextTurn(G, ctx)).toEqual(0);
   });
@@ -439,6 +437,10 @@ describe('mergerPhaseNextTurn', () => {
       playOrderPos: 3,
       numPlayers: 4,
       playOrder: ['Player1', 'Player2', 'Player3', 'Player4'],
+      activePlayers: {},
+      currentPlayer: '3',
+      turn: 0,
+      phase: 'mergerPhase',
     };
     expect(mergerPhaseNextTurn(G, ctx)).toEqual(1);
   });
@@ -452,6 +454,10 @@ describe('mergerPhaseNextTurn', () => {
       playOrderPos: 1,
       numPlayers: 4,
       playOrder: ['Player1', 'Player2', 'Player3', 'Player4'],
+      activePlayers: {},
+      currentPlayer: '1',
+      turn: 0,
+      phase: 'mergerPhase',
     };
     expect(mergerPhaseNextTurn(G, ctx)).toBeUndefined();
   });
@@ -472,6 +478,10 @@ describe('mergerPhaseNextTurn', () => {
       playOrderPos: 2,
       numPlayers: 4,
       playOrder: ['Player1', 'Player2', 'Player3', 'Player4'],
+      activePlayers: {},
+      currentPlayer: '2',
+      turn: 0,
+      phase: 'mergerPhase',
     };
     expect(mergerPhaseNextTurn(G, ctx)).toBeUndefined();
   });

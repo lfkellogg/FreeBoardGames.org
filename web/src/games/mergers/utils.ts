@@ -2,6 +2,16 @@ import { Chain, Hotel, IG, Player } from './types';
 
 const NUM_COLUMNS = 12;
 const ROW_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+const STOCK_PER_CHAIN = 25;
+
+export function setupInitialState(numPlayers: number): IG {
+  return {
+    hotels: setupHotels(),
+    players: setupPlayers(numPlayers),
+    availableStocks: fillStockMap(STOCK_PER_CHAIN),
+    lastMove: '',
+  };
+}
 
 export function setupHotels(): Hotel[][] {
   const hotels: Hotel[][] = [];
@@ -24,34 +34,26 @@ export function setupPlayers(numPlayers: number): Record<string, Player> {
     players[id] = {
       id,
       money: 6000,
-      stocks: {
-        Tower: 0,
-        Luxor: 0,
-        Worldwide: 0,
-        American: 0,
-        Festival: 0,
-        Continental: 0,
-        Imperial: 0,
-      },
+      stocks: fillStockMap(0),
       hotels: [],
     };
   }
   return players;
 }
 
-export function setupAvailableStocks(): Record<Chain, number> {
+export function fillStockMap<T>(value: T): Record<Chain, T> {
   return {
-    Tower: 25,
-    Luxor: 25,
-    Worldwide: 25,
-    American: 25,
-    Festival: 25,
-    Continental: 25,
-    Imperial: 25,
+    Tower: value,
+    Luxor: value,
+    Worldwide: value,
+    American: value,
+    Festival: value,
+    Continental: value,
+    Imperial: value,
   };
 }
 
-function isHotel(hotel: Hotel | string): hotel is Hotel {
+export function isHotel(hotel: Hotel | string): hotel is Hotel {
   if ((hotel as Hotel).id) {
     return true;
   }
