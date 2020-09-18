@@ -42,7 +42,7 @@ export function placeHotel(G: IG, ctx: Ctx, id?: string) {
   }
 
   const hotel: Hotel = getHotel(G, id);
-  if (hotel.drawnByPlayer !== ctx.playerID || isUnplayable(G, hotel)) {
+  if (hotel.hasBeenPlaced || hotel.drawnByPlayer !== ctx.playerID || isUnplayable(G, hotel)) {
     return INVALID_MOVE;
   }
   moveHotelToBoard(G, hotel);
@@ -516,6 +516,8 @@ export const MergersGame: Game<IG> = {
     mergerPhase: {
       turn: {
         order: {
+          // TODO: this will always let the person who made the merger select first, even when they
+          // don't have any stock; either give them a better UX (button called "pass") or skip them
           first: (G: IG, ctx: Ctx) => ctx.playOrderPos,
           next: mergerPhaseNextTurn,
         },

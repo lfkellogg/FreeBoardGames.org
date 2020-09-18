@@ -53,6 +53,10 @@ div {
   border-color: #76ff03; /* material light green A400 */
 }
 
+.PlayerMoney {
+  margin-right: 1em;
+}
+
 .RowLabel {
   margin-right: 1em;
 }
@@ -61,6 +65,7 @@ div {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  margin: 0.25em 0;
 }
 
 .FlexColumn {
@@ -84,20 +89,13 @@ div {
 .Actions {
   border: 0.25em solid black;
   border-radius: 0.25em;
-  padding: 0.5em;
+  padding: 0 0.5em;
   margin-top: 0.25em;
   min-height: 3.5em;
 }
 
 .Actions.YourTurn {
   border-color: #76ff03; /* material light green A400 */
-}
-
-.PlayerStocks {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  margin: 0.25em 0;
 }
 
 .PlayerStock {
@@ -131,18 +129,17 @@ div {
   line-height: 100%;
   text-align: center;
   box-sizing: border-box;
-  font-size: 1.5em;
+  font-size: 0.75em;
   color: #455a64;
 }
 
 .Hotel {
-  height: 6vw;
-  width: 6vw;
-  max-width: 6vh;
-  max-height: 6vh;
+  height: 5vw;
+  width: 5vw;
+  max-width: 5vh;
+  max-height: 5vh;
   border-radius: 0.25em;
   text-align: center;
-  cursor: default;
   box-sizing: border-box;
   border: 0.25em solid transparent;
   display: flex;
@@ -151,12 +148,15 @@ div {
 }
 
 .StarIcon {
-  height: 1.5em;
-  width: 1.5em;
+  height: 1em;
+  width: 1em;
 }
 
 .Hotel .LabelContainer {
   font-size: 1em;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .Hotel.Empty {

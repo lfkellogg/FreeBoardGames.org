@@ -33,7 +33,6 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     super(props);
     this.renderHotel = this.renderHotel.bind(this);
     this.renderHotelRow = this.renderHotelRow.bind(this);
-    this.renderBoard = this.renderBoard.bind(this);
     this.renderHotelInRack = this.renderHotelInRack.bind(this);
     this.state = {
       stocksToBuy: {
@@ -144,11 +143,9 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
   renderHotelRow(chainTiles: {}, row: Hotel[], i: number) {
     return (
       <tr key={`hotel-row-${i}`} className={css.HotelRow}>
-        {/* <td key={`row-header-${i}`}>
-          <div className={css.Label}>
-            {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'][i]}
-          </div>
-        </td> */}
+        <td key={`row-header-${i}`}>
+          <div className={css.Label}>{['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'][i]}</div>
+        </td>
         {row.map(this.renderHotel.bind(this, chainTiles))}
       </tr>
     );
@@ -183,7 +180,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       <div className={css.Board}>
         <table>
           <tbody>
-            {/* {this.renderColumnHeaders()} */}
+            {this.renderColumnHeaders()}
             {this.props.G.hotels.map(this.renderHotelRow.bind(this, chainTiles))}
           </tbody>
         </table>
@@ -264,7 +261,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
 
   renderAvailableStocks() {
     return (
-      <div className={css.PlayerStocks}>
+      <div className={css.WrapRow}>
         <div className={css.RowLabel}>Available stocks:</div>
         {Object.keys(Chain).map((key) => this.renderAvailableStock(Chain[key]))}
       </div>
@@ -492,18 +489,10 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
   renderPlayerStatus() {
     const player = this.playerState();
     return (
-      <div className={css.PlayerStatus}>
-        {/* <div className={css.Rack}>
-          {player.hotels.map(this.renderHotelInRack)}
-        </div> */}
-        <div className={css.PlayerStocks}>
-          <div className={css.RowLabel}>Your stocks:</div>
-          {Object.keys(Chain).map((key) => this.renderStock(Chain[key], player.stocks[Chain[key]], true))}
-        </div>
-        <div className={css.PlayerMoney}>
-          <span className={css.RowLabel}>Your money:</span>
-          <span>${player.money}</span>
-        </div>
+      <div className={css.WrapRow}>
+        <div className={css.RowLabel}>You have:</div>
+        <span className={css.PlayerMoney}>${player.money}</span>
+        {Object.keys(Chain).map((key) => this.renderStock(Chain[key], player.stocks[Chain[key]], true))}
       </div>
     );
   }
