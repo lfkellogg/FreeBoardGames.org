@@ -28,6 +28,7 @@ interface IBoardState {
 //  - show card w/ prices and bonuses
 //  - animations
 //  - fix layout on small screens
+//  - add validation to swap/sell stock
 export class Board extends React.Component<IBoardProps, IBoardState> {
   constructor(props) {
     super(props);
@@ -316,6 +317,11 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
   }
 
   renderBuyStock() {
+    const stocksToBuy = this.parseStocksToBuy();
+    let numStocksToBuy = 0;
+    for (const key of Object.keys(stocksToBuy)) {
+      numStocksToBuy += stocksToBuy[key];
+    }
     const errorMsg = this.validateStocksToBuy();
     return (
       <div>
@@ -331,11 +337,11 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
               if (!!errorMsg) {
                 return;
               }
-              this.props.moves.buyStock(this.parseStocksToBuy());
+              this.props.moves.buyStock(stocksToBuy);
               this.setState({ stocksToBuy: fillStockMap('') });
             }}
           >
-            Buy
+            {numStocksToBuy === 0 ? 'Pass' : 'Buy'}
           </Button>
         </div>
         <div className={css.ErrorText}>{errorMsg}</div>
@@ -379,48 +385,54 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
   }
 
   renderSwapAndSellStock() {
+    const numToSwap = this.state.stocksToSwap || 0;
+    const numToSell = this.state.stocksToSell || 0;
     return (
       <div className={css.WrapRow}>
         <div className={css.RowLabel}>{`Do you want to exchange any ${this.props.G.chainToMerge} stock?`}</div>
-        <div>Swap</div>
-        <TextField
-          className={css.BuyStockInput}
-          placeholder="#"
-          value={this.state.stocksToSwap || ''}
-          onChange={(e) => {
-            let n = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
-            if (Number.isNaN(n)) {
-              n = 0;
-            }
-            this.setState({
-              stocksToSwap: n,
-            });
-          }}
-        ></TextField>
-        <div>Sell</div>
-        <TextField
-          className={css.BuyStockInput}
-          placeholder="#"
-          value={this.state.stocksToSell || ''}
-          onChange={(e) => {
-            let n = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
-            if (Number.isNaN(n)) {
-              n = 0;
-            }
-            this.setState({
-              stocksToSell: n,
-            });
-          }}
-        ></TextField>
+        <div className={css.SwapSellEntry}>
+          <div className={css.SwapSellLabel}>Swap</div>
+          <TextField
+            className={css.BuyStockInput}
+            placeholder="#"
+            value={this.state.stocksToSwap || ''}
+            onChange={(e) => {
+              let n = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+              if (Number.isNaN(n)) {
+                n = 0;
+              }
+              this.setState({
+                stocksToSwap: n,
+              });
+            }}
+          ></TextField>
+        </div>
+        <div className={css.SwapSellEntry}>
+          <div className={css.SwapSellLabel}>Sell</div>
+          <TextField
+            className={css.BuyStockInput}
+            placeholder="#"
+            value={this.state.stocksToSell || ''}
+            onChange={(e) => {
+              let n = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+              if (Number.isNaN(n)) {
+                n = 0;
+              }
+              this.setState({
+                stocksToSell: n,
+              });
+            }}
+          ></TextField>
+        </div>
         <Button
           variant="contained"
           color="primary"
           onClick={() => {
-            this.props.moves.swapAndSellStock(this.state.stocksToSwap || 0, this.state.stocksToSell || 0);
+            this.props.moves.swapAndSellStock(numToSwap, numToSell);
             this.setState({ stocksToSwap: 0, stocksToSell: 0 });
           }}
         >
-          Exchange
+          {numToSwap + numToSell > 0 ? 'OK' : 'Pass'}
         </Button>
       </div>
     );

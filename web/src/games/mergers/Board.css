@@ -101,7 +101,7 @@ div {
 .PlayerStock {
   display: flex;
   align-items: flex-end;
-  margin-right: 0.25em;
+  margin-right: 0.5em;
 }
 
 .PlayerStock.HiddenStock {
@@ -114,6 +114,17 @@ div {
 .Hotel.PlayerStockLabel {
   height: 2em;
   width: 1.5em;
+  margin-right: 0.25em;
+  font-size: 1em;
+}
+
+.SwapSellEntry {
+  display: flex;
+  align-items: center;
+  margin-right: 1em;
+}
+
+.SwapSellLabel {
   margin-right: 0.25em;
   font-size: 1em;
 }

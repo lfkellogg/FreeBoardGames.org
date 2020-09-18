@@ -130,7 +130,7 @@ export function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
       } else {
         G.lastMove += ', ';
       }
-      G.lastMove += `${stocksToBuy} ${chain}`;
+      G.lastMove += `${stocksToBuy} ${chain} for $${stockPrice * stocksToBuy}`;
       while (stocksToBuy > 0 && player.money >= stockPrice) {
         player.stocks[chain]++;
         player.money -= stockPrice;
