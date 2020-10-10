@@ -220,7 +220,6 @@ export function chooseChainToMerge(G: IG, ctx, chain: Chain) {
   G.lastMove = `Player ${ctx.playerID} chooses ${chain} to merge next`;
 }
 
-// TODO: test this
 export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) {
   const player = G.players[ctx.playerID];
   const originalStockCount = player.stocks[G.chainToMerge];
@@ -242,7 +241,6 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
   if (toSwap > 0) {
     G.lastMove = `Player ${ctx.playerID} swaps ${toSwap} ${G.chainToMerge} for ${toSwap / 2} ${G.survivingChain}`;
   }
-
   // player gives away N stocks of the merged chan
   player.stocks[G.chainToMerge] -= toSwap;
   G.availableStocks[G.chainToMerge] += toSwap;
@@ -260,6 +258,7 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
     }
     G.lastMove += `sells ${toSell} ${G.chainToMerge}`;
   }
+
   player.stocks[G.chainToMerge] -= toSell;
   G.availableStocks[G.chainToMerge] += toSell;
   player.money += toSell * priceOfStock(G.chainToMerge, G.hotels);
@@ -390,6 +389,15 @@ export function mergerPhaseNextTurn(G: IG, ctx: Ctx) {
     }
     nextPos = (nextPos + 1) % ctx.numPlayers;
   }
+
+  if (G.mergingChains.length === 1) {
+    ctx.events.setPhase('buildingPhase');
+  } else {
+    ctx.events.setPhase('chooseChainToMergePhase');
+  }
+
+  // return a value anyway just to avoid from ending the phase
+  return nextPos;
 }
 
 export const MergersGame: Game<IG> = {
@@ -465,7 +473,6 @@ export const MergersGame: Game<IG> = {
         if (G.lastPlacedHotel) {
           // if returning from a merger phase, we're now in the buy stock stage
           const hotel = getHotel(G, G.lastPlacedHotel);
-          absorbNewHotels(G, hotel.chain, G.lastPlacedHotel);
           ctx.events.setActivePlayers({ value: { [hotel.drawnByPlayer]: 'buyStockStage' } });
         }
       },
@@ -524,15 +531,11 @@ export const MergersGame: Game<IG> = {
         moveLimit: 1,
       },
 
-      next: 'buildingPhase',
-
       moves: { swapAndSellStock },
-
-      endIf: (G: IG) => G.mergingChains.length === 0,
 
       onBegin: (G: IG) => awardBonuses(G, G.chainToMerge),
 
-      onEnd: (G: IG, ctx: Ctx) => {
+      onEnd: (G: IG) => {
         // remove the just-merged chain
         G.chainToMerge = undefined;
         G.mergingChains.shift();
@@ -541,8 +544,6 @@ export const MergersGame: Game<IG> = {
         if (G.mergingChains.length === 0) {
           absorbNewHotels(G, G.survivingChain, G.lastPlacedHotel);
           G.survivingChain = undefined;
-        } else {
-          ctx.events.setPhase('chooseChainToMergePhase');
         }
       },
     },

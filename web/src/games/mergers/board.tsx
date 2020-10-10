@@ -1,13 +1,16 @@
 import * as React from 'react';
 import Button from '@material-ui/core/Button';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import Dialog from '@material-ui/core/Dialog';
 import TextField from '@material-ui/core/TextField';
 import StarIcon from '@material-ui/icons/Star';
 import { IGameArgs } from 'gamesShared/definitions/game';
 import { GameLayout } from 'gamesShared/components/fbg/GameLayout';
 import { Ctx } from 'boardgame.io';
 import { Chain, Hotel, IG } from './types';
-import { fillStockMap, isUnplayable, priceOfStock, sizeOfChain } from './utils';
+import { fillStockMap, isUnplayable, majorityBonus, minorityBonus, priceOfStock, sizeOfChain } from './utils';
 import css from './Board.css';
+import { DialogActions, DialogContent, DialogContentText } from '@material-ui/core';
 
 interface IBoardProps {
   G: IG;
@@ -19,6 +22,7 @@ interface IBoardProps {
 
 interface IBoardState {
   stocksToBuy: Record<Chain, string>;
+  mergerDetailsDismissed: boolean;
   stocksToSwap?: number;
   stocksToSell?: number;
   hoveredHotel?: string;
@@ -45,7 +49,15 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
         Continental: '',
         Imperial: '',
       },
+      mergerDetailsDismissed: false,
     };
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.props.G.chainToMerge !== prevProps.G.chainToMerge) {
+      // reset the merger dialog dismissed state
+      this.setState({ mergerDetailsDismissed: false });
+    }
   }
 
   playerID() {
@@ -523,6 +535,49 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     );
   }
 
+  maybeRenderMergerDetails() {
+    if (this.props.ctx.phase !== 'mergerPhase') {
+      return;
+    }
+
+    const { chainToMerge, survivingChain } = this.props.G;
+
+    const onClose = () => this.setState({ mergerDetailsDismissed: true });
+
+    const renderStockCount = (player) => {
+      const name = this.props.gameArgs.players[player.id].name;
+      return (
+        <div>
+          {name} has {player.stocks[chainToMerge]}
+        </div>
+      );
+    };
+
+    return (
+      <Dialog onClose={onClose} aria-labelledby="merger-dialog-title" open={!this.state.mergerDetailsDismissed}>
+        <DialogTitle id="merger-dialog-title">
+          {chainToMerge} is merging into {survivingChain}!
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="merger-dialog-description">
+            <div>The following players have {chainToMerge} stock:</div>
+            {Object.values(this.props.G.players)
+              .filter((p) => !!p.stocks[chainToMerge])
+              .sort((a, b) => b.stocks[chainToMerge] - a.stocks[chainToMerge])
+              .map(renderStockCount)}
+            <div>Majority bonus: ${majorityBonus(this.props.G, chainToMerge)}</div>
+            <div>Minority bonus: ${minorityBonus(this.props.G, chainToMerge)}</div>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose} color="primary" autoFocus>
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
+
   render() {
     // console.log('rendering with props', this.props);
     // console.log('rendering with state', this.state);
@@ -536,6 +591,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
           {this.renderBoard()}
           {this.renderActions()}
           {this.renderPlayerStatus()}
+          {this.maybeRenderMergerDetails()}
         </div>
       </GameLayout>
     );

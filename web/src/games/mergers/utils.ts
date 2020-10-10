@@ -139,7 +139,7 @@ export function playersInMinority(G: IG, chain: Chain): Player[] {
   const players = playersInDescOrderOfStock(G, chain);
   const majorityStockCount = players[0].stocks[chain];
   const minorityStockCount = players[1].stocks[chain];
-  if (majorityStockCount === minorityStockCount || minorityStockCount === 0) {
+  if (majorityStockCount === minorityStockCount || !minorityStockCount) {
     return [];
   }
   return players.filter((p) => p.stocks[chain] === minorityStockCount);
