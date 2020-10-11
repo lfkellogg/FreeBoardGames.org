@@ -193,7 +193,9 @@ export function firstBuildTurn(G: IG, ctx: Ctx): number {
     // first)
     const allHotels = G.hotels.flat();
     allHotels.sort((a, b) => getColumn(a) - getColumn(b)).sort((a, b) => getRow(a) - getRow(b));
-    return ctx.playOrder.indexOf(allHotels.find((h) => h.hasBeenPlaced).drawnByPlayer);
+    const topLeftMostHotel = allHotels.find((h) => h.hasBeenPlaced);
+    G.lastMove = `Player ${topLeftMostHotel.drawnByPlayer} draws ${topLeftMostHotel.id} and will go first`;
+    return ctx.playOrder.indexOf(topLeftMostHotel.drawnByPlayer);
   }
 }
 

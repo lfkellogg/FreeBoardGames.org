@@ -245,7 +245,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
         <div className={css.RowLabel}>Current turn:</div>
         {this.props.gameArgs.players.map((player) => {
           let turnClass = '';
-          if (this.props.ctx.currentPlayer === `${player.playerID}`) {
+          if (!this.props.ctx.gameover && this.props.ctx.currentPlayer === `${player.playerID}`) {
             if (this.props.ctx.currentPlayer === this.playerID()) {
               turnClass = css.YourTurn;
             } else {
