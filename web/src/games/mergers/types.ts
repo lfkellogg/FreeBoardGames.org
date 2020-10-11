@@ -4,10 +4,6 @@ export interface IG {
   players?: Record<string, Player>;
   availableStocks?: Record<Chain, number>;
   lastPlacedHotel?: string;
-  survivingChain?: Chain;
-  chainToMerge?: Chain;
-  mergingChains?: Chain[];
-  bonuses?: Record<string, number>;
   lastMove?: string;
   // TODO: use this for mergers? replaces survivingChain, chainToMerge, and bonuses
   // - on a merger, fill and use to display snapshot to players
@@ -56,7 +52,8 @@ export interface SwapAndSell {
 
 export interface Merger {
   survivingChain?: Chain;
-  mergingChain?: Chain;
+  chainToMerge?: Chain;
+  mergingChains?: Chain[];
   stockCounts?: Record<string, number>;
   bonuses?: Record<string, number>;
   swapAndSells?: Record<string, SwapAndSell>;

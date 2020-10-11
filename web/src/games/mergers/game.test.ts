@@ -1,5 +1,4 @@
 import { Ctx } from 'boardgame.io';
-import { Game } from 'boardgame.io/game';
 import { Client } from 'boardgame.io/client';
 import { INVALID_MOVE } from 'boardgame.io/core';
 import { Local } from 'boardgame.io/multiplayer';
@@ -25,7 +24,7 @@ function setupTestHotels(): Hotel[][] {
   ];
 }
 
-function getScenario(hotels?: Hotel[][]): Game {
+function getScenario(hotels?: Hotel[][]) {
   const MergersCustomScenario = {
     ...MergersGame,
     setup: (ctx: Ctx) => {
@@ -279,9 +278,9 @@ describe('playersInMinority', () => {
 
 describe('awardBonuses', () => {
   it('awards a single player majority and minority', () => {
-    const player0 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 3 }, money: 6000 };
-    const player1 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 4 }, money: 6000 };
-    const player2 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 1 }, money: 6000 };
+    const player0 = { id: '0', stocks: { ...fillStockMap(0), [Chain.Tower]: 3 }, money: 6000 };
+    const player1 = { id: '1', stocks: { ...fillStockMap(0), [Chain.Tower]: 4 }, money: 6000 };
+    const player2 = { id: '2', stocks: { ...fillStockMap(0), [Chain.Tower]: 1 }, money: 6000 };
 
     // size of chain = 3 => stock price = 300, majority = 3000, minority = 1500
     const hotels = [
@@ -315,12 +314,14 @@ describe('chooseSurvivingChain', () => {
       [{ chain: Chain.Continental }, { chain: Chain.American }],
     ];
     const G: IG = {
-      mergingChains: [Chain.Tower, Chain.Continental, Chain.American],
+      merger: {
+        mergingChains: [Chain.Tower, Chain.Continental, Chain.American],
+      },
       hotels,
     };
     const result = chooseSurvivingChain(G, {}, Chain.Continental);
-    expect(G.survivingChain).toEqual(Chain.Continental);
-    expect(G.mergingChains).toEqual([Chain.Tower, Chain.American]);
+    expect(G.merger.survivingChain).toEqual(Chain.Continental);
+    expect(G.merger.mergingChains).toEqual([Chain.Tower, Chain.American]);
     expect(result).not.toEqual(INVALID_MOVE);
   });
 
@@ -331,7 +332,9 @@ describe('chooseSurvivingChain', () => {
       [{ chain: Chain.Continental }, { chain: Chain.American }],
     ];
     const G: IG = {
-      mergingChains: [Chain.Tower, Chain.Continental, Chain.American],
+      merger: {
+        mergingChains: [Chain.Tower, Chain.Continental, Chain.American],
+      },
       hotels,
     };
     const result = chooseSurvivingChain(G, {}, Chain.American);
@@ -348,13 +351,15 @@ describe('chooseChainToMerge', () => {
       [{ chain: Chain.Festival }, { chain: Chain.Festival }],
     ];
     const G: IG = {
-      survivingChain: Chain.Tower,
-      mergingChains: [Chain.Festival, Chain.American, Chain.Continental],
+      merger: {
+        survivingChain: Chain.Tower,
+        mergingChains: [Chain.Festival, Chain.American, Chain.Continental],
+      },
       hotels,
     };
     const result = chooseChainToMerge(G, {}, Chain.Continental);
-    expect(G.chainToMerge).toEqual(Chain.Continental);
-    expect(G.mergingChains).toEqual([Chain.Continental, Chain.Festival, Chain.American]);
+    expect(G.merger.chainToMerge).toEqual(Chain.Continental);
+    expect(G.merger.mergingChains).toEqual([Chain.Continental, Chain.Festival, Chain.American]);
     expect(result).not.toEqual(INVALID_MOVE);
   });
 });
@@ -367,14 +372,16 @@ describe('autosetChainToMerge', () => {
       [{ chain: Chain.Continental }, { chain: Chain.American }],
     ];
     const G: IG = {
-      chainToMerge: Chain.American, // would be disallowed, but illustrates this test
-      survivingChain: Chain.Tower,
-      mergingChains: [Chain.American, Chain.Continental],
+      merger: {
+        chainToMerge: Chain.American, // would be disallowed, but illustrates this test
+        survivingChain: Chain.Tower,
+        mergingChains: [Chain.American, Chain.Continental],
+      },
       hotels,
     };
     autosetChainToMerge(G);
-    expect(G.chainToMerge).toEqual(Chain.American);
-    expect(G.mergingChains).toEqual([Chain.American, Chain.Continental]);
+    expect(G.merger.chainToMerge).toEqual(Chain.American);
+    expect(G.merger.mergingChains).toEqual([Chain.American, Chain.Continental]);
   });
 
   it('chooses the next largest chain', () => {
@@ -384,13 +391,15 @@ describe('autosetChainToMerge', () => {
       [{ chain: Chain.Continental }, { chain: Chain.American }],
     ];
     const G: IG = {
-      survivingChain: Chain.Tower,
-      mergingChains: [Chain.Continental, Chain.American],
+      merger: {
+        survivingChain: Chain.Tower,
+        mergingChains: [Chain.Continental, Chain.American],
+      },
       hotels,
     };
     autosetChainToMerge(G);
-    expect(G.chainToMerge).toEqual(Chain.Continental);
-    expect(G.mergingChains).toEqual([Chain.Continental, Chain.American]);
+    expect(G.merger.chainToMerge).toEqual(Chain.Continental);
+    expect(G.merger.mergingChains).toEqual([Chain.Continental, Chain.American]);
   });
 
   it('choose nothing if there is a tie', () => {
@@ -400,13 +409,15 @@ describe('autosetChainToMerge', () => {
       [{ chain: Chain.Continental }, { chain: Chain.American }],
     ];
     const G: IG = {
-      survivingChain: Chain.Tower,
-      mergingChains: [Chain.American, Chain.Continental],
+      merger: {
+        survivingChain: Chain.Tower,
+        mergingChains: [Chain.American, Chain.Continental],
+      },
       hotels,
     };
     autosetChainToMerge(G);
-    expect(G.chainToMerge).toBeUndefined();
-    expect(G.mergingChains).toEqual([Chain.American, Chain.Continental]);
+    expect(G.merger.chainToMerge).toBeUndefined();
+    expect(G.merger.mergingChains).toEqual([Chain.American, Chain.Continental]);
   });
 });
 
@@ -420,12 +431,10 @@ describe('mergerPhaseNextTurn', () => {
     const G: IG = {
       lastPlacedHotel: '1-A',
       hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
-      chainToMerge: Chain.Tower,
-      players: {
-        Player1: { stocks: { ...fillStockMap(0), [Chain.Tower]: 1 } },
-        Player2: { stocks: fillStockMap(0) },
-        Player3: { stocks: fillStockMap(0) },
-        Player4: { stocks: fillStockMap(0) },
+      merger: {
+        chainToMerge: Chain.Tower,
+        mergingChains: [Chain.Tower],
+        swapAndSells: {},
       },
     };
     const ctx: Ctx = {
@@ -433,7 +442,7 @@ describe('mergerPhaseNextTurn', () => {
       numPlayers: 4,
       playOrder: ['Player1', 'Player2', 'Player3', 'Player4'],
       activePlayers: {},
-      currentPlayer: '3',
+      currentPlayer: 'Player4',
       turn: 0,
       phase: 'mergerPhase',
       events: eventsSpy,
@@ -442,24 +451,26 @@ describe('mergerPhaseNextTurn', () => {
     expect(eventsSpy.setPhase.mock.calls.length).toEqual(0);
   });
 
-  it('skips to the next player with stock', () => {
-    const G = {
+  it('skips the merging player if they do not have any stock', () => {
+    const G: IG = {
       lastPlacedHotel: '1-A',
       hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
-      chainToMerge: Chain.Tower,
-      players: {
-        Player1: { stocks: fillStockMap(0) },
-        Player2: { stocks: { ...fillStockMap(0), [Chain.Tower]: 1 } },
-        Player3: { stocks: fillStockMap(0) },
-        Player4: { stocks: fillStockMap(0) },
+      merger: {
+        chainToMerge: Chain.Tower,
+        mergingChains: [Chain.Tower],
+        swapAndSells: {
+          Player1: { swap: 0, sell: 0 },
+          Player3: { swap: 0, sell: 0 },
+          Player4: { swap: 0, sell: 0 },
+        },
       },
     };
     const ctx = {
-      playOrderPos: 3,
+      playOrderPos: 2,
       numPlayers: 4,
       playOrder: ['Player1', 'Player2', 'Player3', 'Player4'],
       activePlayers: {},
-      currentPlayer: '3',
+      currentPlayer: 'Player3',
       turn: 0,
       phase: 'mergerPhase',
       events: eventsSpy,
@@ -468,10 +479,47 @@ describe('mergerPhaseNextTurn', () => {
     expect(eventsSpy.setPhase.mock.calls.length).toEqual(0);
   });
 
-  it('stops if the next player caused the merger', () => {
+  it('skips to the next player that has not exchanged stock', () => {
+    const G: IG = {
+      lastPlacedHotel: '1-A',
+      hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
+      merger: {
+        chainToMerge: Chain.Tower,
+        mergingChains: [Chain.Tower],
+        swapAndSells: {
+          Player1: { swap: 0, sell: 0 },
+          Player3: { swap: 0, sell: 0 },
+          Player4: { swap: 0, sell: 0 },
+        },
+      },
+    };
+    const ctx = {
+      playOrderPos: 3,
+      numPlayers: 4,
+      playOrder: ['Player1', 'Player2', 'Player3', 'Player4'],
+      activePlayers: {},
+      currentPlayer: 'Player4',
+      turn: 0,
+      phase: 'mergerPhase',
+      events: eventsSpy,
+    };
+    expect(mergerPhaseNextTurn(G, ctx)).toEqual(1);
+    expect(eventsSpy.setPhase.mock.calls.length).toEqual(0);
+  });
+
+  it('stops if the next player caused the merger and they have exchanged', () => {
     const G = {
       lastPlacedHotel: '1-A',
-      mergingChains: [Chain.Tower],
+      merger: {
+        chainToMerge: Chain.Tower,
+        mergingChains: [Chain.Tower],
+        swapAndSells: {
+          Player1: { swap: 0, sell: 0 },
+          Player2: { swap: 0, sell: 0 },
+          Player3: { swap: 0, sell: 0 },
+          Player4: { swap: 0, sell: 0 },
+        },
+      },
       hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
     };
     const ctx = {
@@ -479,7 +527,7 @@ describe('mergerPhaseNextTurn', () => {
       numPlayers: 4,
       playOrder: ['Player1', 'Player2', 'Player3', 'Player4'],
       activePlayers: {},
-      currentPlayer: '1',
+      currentPlayer: 'Player2',
       turn: 0,
       phase: 'mergerPhase',
       events: eventsSpy,
@@ -492,13 +540,15 @@ describe('mergerPhaseNextTurn', () => {
     const G = {
       lastPlacedHotel: '1-A',
       hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
-      chainToMerge: Chain.Tower,
-      mergingChains: [Chain.Tower],
-      players: {
-        Player1: { stocks: fillStockMap(0) },
-        Player2: { stocks: fillStockMap(0) },
-        Player3: { stocks: { ...fillStockMap(0), [Chain.Tower]: 1 } },
-        Player4: { stocks: fillStockMap(0) },
+      merger: {
+        chainToMerge: Chain.Tower,
+        mergingChains: [Chain.Tower],
+        swapAndSells: {
+          Player1: { swap: 0, sell: 0 },
+          Player2: { swap: 0, sell: 0 },
+          Player3: { swap: 0, sell: 0 },
+          Player4: { swap: 0, sell: 0 },
+        },
       },
     };
     const ctx = {
@@ -519,13 +569,15 @@ describe('mergerPhaseNextTurn', () => {
     const G = {
       lastPlacedHotel: '1-A',
       hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
-      chainToMerge: Chain.Tower,
-      mergingChains: [Chain.Tower, Chain.Luxor],
-      players: {
-        Player1: { stocks: fillStockMap(0) },
-        Player2: { stocks: fillStockMap(0) },
-        Player3: { stocks: { ...fillStockMap(0), [Chain.Tower]: 1 } },
-        Player4: { stocks: fillStockMap(0) },
+      merger: {
+        chainToMerge: Chain.Tower,
+        mergingChains: [Chain.Tower, Chain.Luxor],
+        swapAndSells: {
+          Player1: { swap: 0, sell: 0 },
+          Player2: { swap: 0, sell: 0 },
+          Player3: { swap: 0, sell: 0 },
+          Player4: { swap: 0, sell: 0 },
+        },
       },
     };
     const ctx = {
@@ -543,6 +595,9 @@ describe('mergerPhaseNextTurn', () => {
   });
 });
 
+// TODO:
+//   - merger where no one has any stock
+//   - merger where the person who merged has no stock
 describe('mergerPhase', () => {
   describe('a 3-way merger', () => {
     let p0: Client;
@@ -579,11 +634,9 @@ describe('mergerPhase', () => {
 
       G = p0.store.getState().G;
 
-      G.players['0'].stocks = fillStockMap(0);
       G.players['0'].stocks[Chain.Tower] = 1;
       G.players['0'].stocks[Chain.Continental] = 2;
 
-      G.players['1'].stocks = fillStockMap(0);
       G.players['1'].stocks[Chain.American] = 1;
       G.players['1'].stocks[Chain.Continental] = 1;
     });
@@ -632,12 +685,15 @@ describe('mergerPhase', () => {
       expect(p0.store.getState().G.players['0'].stocks[Chain.American]).toEqual(1);
       expect(p0.store.getState().G.players['0'].money).toEqual(13200);
       // p1 swaps and sells stock
-      debugger;
       p1.moves.swapAndSellStock(0, 0); // swap 0, sell 0
       expect(p0.store.getState().G.players['1'].stocks[Chain.Continental]).toEqual(1);
       expect(p0.store.getState().G.players['1'].money).toEqual(8000);
 
-      // absorb hotels
+      // moves on to buildingPhase
+      expect(p0.store.getState().ctx.phase).toEqual('buildingPhase');
+      expect(p0.store.getState().ctx.activePlayers[0]).toEqual('buyStockStage');
+
+      // absorbs hotels
       const expectedBoard = [
         [
           { id: '1-A', hasBeenPlaced: true, chain: Chain.American },
@@ -659,10 +715,86 @@ describe('mergerPhase', () => {
         ],
       ];
       expect(p0.store.getState().G.hotels).toEqual(expectedBoard);
+    });
+  });
 
-      // buildingPhase
+  describe('when the merging player does not have stock in the chain', () => {
+    let p0: Client;
+    let p1: Client;
+    let G: IG;
+    let originalBoard: Hotel[][];
+    beforeEach(() => {
+      originalBoard = [
+        [
+          { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower },
+          { id: '2-A', hasBeenPlaced: true, chain: Chain.Tower },
+          { id: '3-A' },
+        ],
+        [{ id: '1-B' }, { id: '2-B', drawnByPlayer: '0' }, { id: '3-B' }],
+        [
+          { id: '1-C', hasBeenPlaced: true, chain: Chain.Continental },
+          { id: '2-C', hasBeenPlaced: true, chain: Chain.Continental },
+          { id: '3-C' },
+        ],
+      ];
+      const clients = getAllTestClients(2, originalBoard);
+      p0 = clients[0];
+      p1 = clients[1];
+
+      p0.start();
+      p1.start();
+
+      G = p0.store.getState().G;
+      G.players['1'].stocks[Chain.Tower] = 1;
+    });
+
+    it('skips to the player with stock', () => {
+      expect(p0.store.getState().G.players['0'].money).toEqual(6000);
+      expect(p1.store.getState().G.players['1'].money).toEqual(6000);
+
+      // place merger tile
+      p0.moves.placeHotel('2-B');
+
+      // chooseSurvivingChainPhase
+      expect(p0.store.getState().ctx.phase).toEqual('chooseSurvivingChainPhase');
+      p0.moves.chooseSurvivingChain(Chain.Continental);
+
+      // chooseChainToMergePhase (skipped)
+
+      // mergerPhase (merging Tower)
+      expect(p0.store.getState().ctx.phase).toEqual('mergerPhase');
+      // awards bonuses (2000, 1000, both to p1)
+      expect(p0.store.getState().G.players['0'].money).toEqual(6000);
+      expect(p0.store.getState().G.players['1'].money).toEqual(9000);
+
+      // p1 exchanges stock
+      p1.moves.swapAndSellStock(0, 1); // swaps 0, sells 1
+      expect(p0.store.getState().G.players['1'].stocks[Chain.Tower]).toEqual(0);
+      expect(p0.store.getState().G.players['1'].money).toEqual(9200);
+
+      // moves on to buildingPhase
       expect(p0.store.getState().ctx.phase).toEqual('buildingPhase');
       expect(p0.store.getState().ctx.activePlayers[0]).toEqual('buyStockStage');
+
+      // absorbs hotels
+      const expectedBoard = [
+        [
+          { id: '1-A', hasBeenPlaced: true, chain: Chain.Continental },
+          { id: '2-A', hasBeenPlaced: true, chain: Chain.Continental },
+          { id: '3-A' },
+        ],
+        [
+          { id: '1-B' },
+          { id: '2-B', drawnByPlayer: '0', hasBeenPlaced: true, chain: Chain.Continental },
+          { id: '3-B' },
+        ],
+        [
+          { id: '1-C', hasBeenPlaced: true, chain: Chain.Continental },
+          { id: '2-C', hasBeenPlaced: true, chain: Chain.Continental },
+          { id: '3-C' },
+        ],
+      ];
+      expect(p0.store.getState().G.hotels).toEqual(expectedBoard);
     });
   });
 });

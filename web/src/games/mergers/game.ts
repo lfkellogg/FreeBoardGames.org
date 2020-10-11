@@ -63,8 +63,9 @@ export function placeHotel(G: IG, ctx: Ctx, id?: string) {
       absorbNewHotels(G, adjacentDefinedChains[0], id);
     } else if (numAdjacentChains > 1) {
       // merger
-      G.mergingChains = Array.from(adjacentDefinedChainSet);
-      G.mergingChains.sort((a, b) => sizeOfChain(b, G.hotels) - sizeOfChain(a, G.hotels));
+      const mergingChains = Array.from(adjacentDefinedChainSet);
+      mergingChains.sort((a, b) => sizeOfChain(b, G.hotels) - sizeOfChain(a, G.hotels));
+      G.merger = { mergingChains };
       ctx.events.setPhase('chooseSurvivingChainPhase');
     }
   }
@@ -198,56 +199,57 @@ export function firstBuildTurn(G: IG, ctx: Ctx): number {
 
 export function chooseSurvivingChain(G: IG, ctx, chain: Chain) {
   // must be the same size as the first (largest) chain in the merge
-  if (sizeOfChain(chain, G.hotels) !== sizeOfChain(G.mergingChains[0], G.hotels)) {
+  if (sizeOfChain(chain, G.hotels) !== sizeOfChain(G.merger.mergingChains[0], G.hotels)) {
     return INVALID_MOVE;
   }
-  G.survivingChain = chain;
-  G.mergingChains.splice(G.mergingChains.indexOf(chain), 1);
+  G.merger.survivingChain = chain;
+  G.merger.mergingChains.splice(G.merger.mergingChains.indexOf(chain), 1);
   G.lastMove = `Player ${ctx.playerID} chooses ${chain} to survive the merger`;
 }
 
 export function chooseChainToMerge(G: IG, ctx, chain: Chain) {
   // must be the same size as the first (largest) merging chain
-  if (sizeOfChain(chain, G.hotels) !== sizeOfChain(G.mergingChains[0], G.hotels)) {
+  if (sizeOfChain(chain, G.hotels) !== sizeOfChain(G.merger.mergingChains[0], G.hotels)) {
     return INVALID_MOVE;
   }
 
-  G.chainToMerge = chain;
+  G.merger.chainToMerge = chain;
 
   // move the chain to the front of the array
-  G.mergingChains.splice(G.mergingChains.indexOf(chain), 1);
-  G.mergingChains.unshift(chain);
+  G.merger.mergingChains.splice(G.merger.mergingChains.indexOf(chain), 1);
+  G.merger.mergingChains.unshift(chain);
   G.lastMove = `Player ${ctx.playerID} chooses ${chain} to merge next`;
 }
 
 export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) {
+  const { chainToMerge, survivingChain } = G.merger;
   const player = G.players[ctx.playerID];
-  const originalStockCount = player.stocks[G.chainToMerge];
+  const originalStockCount = player.stocks[chainToMerge];
 
   if (originalStockCount === 0) {
-    G.lastMove = `Player ${ctx.playerID} has no ${G.chainToMerge} stock`;
+    G.lastMove = `Player ${ctx.playerID} has no ${chainToMerge} stock`;
   } else {
     G.lastMove = '';
   }
 
   let toSwap = swap || 0;
   toSwap = Math.min(toSwap, originalStockCount);
-  toSwap = Math.min(toSwap, G.availableStocks[G.survivingChain] * 2);
+  toSwap = Math.min(toSwap, G.availableStocks[survivingChain] * 2);
   toSwap = roundDownToNearest2(toSwap);
 
   let toSell = sell || 0;
   toSell = Math.min(toSell, originalStockCount);
 
   if (toSwap > 0) {
-    G.lastMove = `Player ${ctx.playerID} swaps ${toSwap} ${G.chainToMerge} for ${toSwap / 2} ${G.survivingChain}`;
+    G.lastMove = `Player ${ctx.playerID} swaps ${toSwap} ${chainToMerge} for ${toSwap / 2} ${survivingChain}`;
   }
   // player gives away N stocks of the merged chan
-  player.stocks[G.chainToMerge] -= toSwap;
-  G.availableStocks[G.chainToMerge] += toSwap;
+  player.stocks[chainToMerge] -= toSwap;
+  G.availableStocks[chainToMerge] += toSwap;
 
   // player receives N / 2 stocks of the surviving chain
-  player.stocks[G.survivingChain] += toSwap / 2;
-  G.availableStocks[G.survivingChain] -= toSwap / 2;
+  player.stocks[survivingChain] += toSwap / 2;
+  G.availableStocks[survivingChain] -= toSwap / 2;
 
   // players sells stocks
   if (toSell > 0) {
@@ -256,20 +258,21 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
     } else {
       G.lastMove += `Player ${ctx.playerID} `;
     }
-    G.lastMove += `sells ${toSell} ${G.chainToMerge}`;
+    G.lastMove += `sells ${toSell} ${chainToMerge}`;
   }
 
-  player.stocks[G.chainToMerge] -= toSell;
-  G.availableStocks[G.chainToMerge] += toSell;
-  player.money += toSell * priceOfStock(G.chainToMerge, G.hotels);
+  player.stocks[chainToMerge] -= toSell;
+  G.availableStocks[chainToMerge] += toSell;
+  player.money += toSell * priceOfStock(chainToMerge, G.hotels);
+  G.merger.swapAndSells[player.id] = { swap: toSwap, sell: toSell };
 
-  if (originalStockCount > 0 && player.stocks[G.chainToMerge] > 0) {
+  if (originalStockCount > 0 && player.stocks[chainToMerge] > 0) {
     if (!G.lastMove) {
       G.lastMove += `Player ${ctx.playerID} `;
     } else {
       G.lastMove += ', ';
     }
-    G.lastMove += `keeps ${player.stocks[G.chainToMerge]} ${G.chainToMerge}`;
+    G.lastMove += `keeps ${player.stocks[chainToMerge]} ${chainToMerge}`;
   }
 }
 
@@ -320,37 +323,47 @@ export function declareGameOver(G: IG, ctx: Ctx, isGameOver: boolean) {
   }
 }
 
-// TODO: log all messages so we can log individual messages for each bonus payout etc.
-export function awardBonuses(G: IG, chain: Chain) {
+export function getBonuses(G: IG, chain: Chain): Record<string, number> {
+  const bonuses = {};
   const majority = playersInMajority(G, chain);
   if (majority.length === 1) {
     // give first bonus to first player
-    majority[0].money += majorityBonus(G, chain);
-    // console.log(`${majority[0].id} gets ${majorityBonus(G, chain)}`);
+    bonuses[majority[0].id] = majorityBonus(G, chain);
 
     const minority = playersInMinority(G, chain);
     if (minority.length === 0) {
       // give minority to the majority as well
-      majority[0].money += minorityBonus(G, chain);
-      // console.log(`${majority[0].id} gets ${minorityBonus(G, chain)}`);
+      bonuses[majority[0].id] += minorityBonus(G, chain);
     } else if (minority.length === 1) {
       // give minority to second place
-      minority[0].money += minorityBonus(G, chain);
-      // console.log(`${minority[0].id} gets ${minorityBonus(G, chain)}`);
+      bonuses[minority[0].id] = minorityBonus(G, chain);
     } else if (minority.length > 1) {
       // split minority bonus between em
       const total = minorityBonus(G, chain);
       const each = roundUpToNearest100(total / minority.length);
-      minority.forEach((p) => (p.money += each));
-      // console.log(`${minority.map(p => p.id)} all get ${each}`);
+      for (const player of minority) {
+        bonuses[player.id] = each;
+      }
     }
   } else if (majority.length > 1) {
     // split both bonuses between some number of folks
     const total = majorityBonus(G, chain) + minorityBonus(G, chain);
     const each = roundUpToNearest100(total / majority.length);
-    majority.forEach((p) => (p.money += each));
-    // console.log(`${majority.map(p => p.id)} all get ${each}`);
+    for (const player of majority) {
+      bonuses[player.id] = each;
+    }
   }
+  return bonuses;
+}
+
+export function awardMoneyToPlayers(G: IG, awards: Record<string, number>) {
+  for (const playerID of Object.keys(awards)) {
+    G.players[playerID].money += awards[playerID];
+  }
+}
+
+export function awardBonuses(G: IG, chain: Chain) {
+  awardMoneyToPlayers(G, getBonuses(G, chain));
 }
 
 export function setupInitialDrawing(G: IG, ctx: Ctx) {
@@ -369,35 +382,56 @@ export function setupInitialDrawing(G: IG, ctx: Ctx) {
 }
 
 export function autosetChainToMerge(G: IG) {
-  // if there's an obvious next chain to merge, set it
-  if (
-    !G.chainToMerge &&
-    (G.mergingChains.length === 1 ||
-      sizeOfChain(G.mergingChains[0], G.hotels) !== sizeOfChain(G.mergingChains[1], G.hotels))
-  ) {
-    G.chainToMerge = G.mergingChains[0];
+  if (!!G.merger.chainToMerge) {
+    return;
+  }
+  if (G.merger.mergingChains.length == 1) {
+    G.merger.chainToMerge = G.merger.mergingChains[0];
+    return;
+  }
+  const firstChainSize = sizeOfChain(G.merger.mergingChains[0], G.hotels);
+  const secondChainSize = sizeOfChain(G.merger.mergingChains[1], G.hotels);
+  if (firstChainSize !== secondChainSize) {
+    G.merger.chainToMerge = G.merger.mergingChains[0];
   }
 }
 
-export function mergerPhaseNextTurn(G: IG, ctx: Ctx) {
-  let nextPos = (ctx.playOrderPos + 1) % ctx.numPlayers;
-  // go through each player once until we get back to the current player
-  while (nextPos !== ctx.playOrder.indexOf(getHotel(G, G.lastPlacedHotel).drawnByPlayer)) {
-    // only stop at a player if they have stock in the merging chain
-    if (G.players[ctx.playOrder[nextPos]].stocks[G.chainToMerge] > 0) {
-      return nextPos;
-    }
-    nextPos = (nextPos + 1) % ctx.numPlayers;
+export function nextPlayerPos(ctx: Ctx, playerPos: number): number {
+  return (playerPos + 1) % ctx.numPlayers;
+}
+
+// TODO: simplify this
+export function mergerPhaseFirstTurn(G: IG, ctx: Ctx) {
+  return mergerPhaseNextTurn(G, ctx, true);
+}
+
+// TODO: simplify this
+export function mergerPhaseNextTurn(G: IG, ctx: Ctx, isFirst: boolean = false) {
+  const mergingPlayerID = getHotel(G, G.lastPlacedHotel).drawnByPlayer;
+  const mergingPlayerPos = ctx.playOrder.indexOf(mergingPlayerID);
+
+  // check if the next player needs to go
+  let startingPos = isFirst ? mergingPlayerPos : nextPlayerPos(ctx, ctx.playOrderPos);
+  if (!G.merger.swapAndSells[ctx.playOrder[startingPos]]) {
+    return startingPos;
   }
 
-  if (G.mergingChains.length === 1) {
+  // otherwise, loop once through the rest of the players until we find one
+  for (let i = nextPlayerPos(ctx, startingPos); i !== startingPos; i = nextPlayerPos(ctx, i)) {
+    if (G.merger.swapAndSells[ctx.playOrder[i]] === undefined) {
+      return i;
+    }
+  }
+
+  if (G.merger.mergingChains.length === 1) {
     ctx.events.setPhase('buildingPhase');
   } else {
     ctx.events.setPhase('chooseChainToMergePhase');
   }
 
-  // return a value anyway just to avoid from ending the phase
-  return nextPos;
+  // return a value to avoid from ending the phase that way, which preempts the setPhase call
+  // we also want to set the merging player as the next turn regardless
+  return mergingPlayerPos;
 }
 
 export const MergersGame: Game<IG> = {
@@ -490,15 +524,17 @@ export const MergersGame: Game<IG> = {
 
       moves: { chooseSurvivingChain },
 
-      endIf: (G: IG) => !!G.survivingChain,
+      endIf: (G: IG) => !!G.merger.survivingChain,
 
       onBegin: (G: IG) => {
+        if (!!G.merger.survivingChain) {
+          return;
+        }
         // if there's a biggest chain, set it as the survivor
-        if (
-          !G.survivingChain &&
-          sizeOfChain(G.mergingChains[0], G.hotels) !== sizeOfChain(G.mergingChains[1], G.hotels)
-        ) {
-          G.survivingChain = G.mergingChains.shift();
+        const firstChainSize = sizeOfChain(G.merger.mergingChains[0], G.hotels);
+        const secondChainSize = sizeOfChain(G.merger.mergingChains[1], G.hotels);
+        if (firstChainSize !== secondChainSize) {
+          G.merger.survivingChain = G.merger.mergingChains.shift();
         }
       },
     },
@@ -515,7 +551,7 @@ export const MergersGame: Game<IG> = {
 
       moves: { chooseChainToMerge },
 
-      endIf: (G: IG) => !G.survivingChain || !!G.chainToMerge,
+      endIf: (G: IG) => !G.merger.survivingChain || !!G.merger.chainToMerge,
 
       onBegin: (G: IG) => autosetChainToMerge(G),
     },
@@ -523,9 +559,7 @@ export const MergersGame: Game<IG> = {
     mergerPhase: {
       turn: {
         order: {
-          // TODO: this will always let the person who made the merger select first, even when they
-          // don't have any stock; either give them a better UX (button called "pass") or skip them
-          first: (G: IG, ctx: Ctx) => ctx.playOrderPos,
+          first: mergerPhaseFirstTurn,
           next: mergerPhaseNextTurn,
         },
         moveLimit: 1,
@@ -533,17 +567,38 @@ export const MergersGame: Game<IG> = {
 
       moves: { swapAndSellStock },
 
-      onBegin: (G: IG) => awardBonuses(G, G.chainToMerge),
+      onBegin: (G: IG) => {
+        // now that we now which chain is being merged, fill in the rest of the merger info
+        const stockCounts = {};
+        const swapAndSells = {};
+        for (const player of Object.values(G.players)) {
+          const numStock = player.stocks[G.merger.chainToMerge];
+          stockCounts[player.id] = numStock;
+          if (numStock === 0) {
+            // for folks that have no stock, prefill their swaps/sells to empty so they're skipped
+            swapAndSells[player.id] = { swap: 0, sell: 0 };
+          }
+        }
+
+        const bonuses = getBonuses(G, G.merger.chainToMerge);
+        G.merger = {
+          ...G.merger,
+          stockCounts,
+          swapAndSells,
+          bonuses,
+        };
+        awardMoneyToPlayers(G, bonuses);
+      },
 
       onEnd: (G: IG) => {
         // remove the just-merged chain
-        G.chainToMerge = undefined;
-        G.mergingChains.shift();
+        G.merger.chainToMerge = undefined;
+        G.merger.mergingChains.shift();
 
-        // if we're all done, remove the surviving chain reference
-        if (G.mergingChains.length === 0) {
-          absorbNewHotels(G, G.survivingChain, G.lastPlacedHotel);
-          G.survivingChain = undefined;
+        // if we're all done, absorb all hotels into the surviving chain and clear the merer
+        if (G.merger.mergingChains.length === 0) {
+          absorbNewHotels(G, G.merger.survivingChain, G.lastPlacedHotel);
+          G.merger = undefined;
         }
       },
     },

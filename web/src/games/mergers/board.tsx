@@ -8,7 +8,7 @@ import { IGameArgs } from 'gamesShared/definitions/game';
 import { GameLayout } from 'gamesShared/components/fbg/GameLayout';
 import { Ctx } from 'boardgame.io';
 import { Chain, Hotel, IG } from './types';
-import { fillStockMap, isUnplayable, majorityBonus, minorityBonus, priceOfStock, sizeOfChain } from './utils';
+import { fillStockMap, isUnplayable, priceOfStock, sizeOfChain } from './utils';
 import css from './Board.css';
 import { DialogActions, DialogContent, DialogContentText } from '@material-ui/core';
 
@@ -54,7 +54,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
   }
 
   componentDidUpdate(prevProps) {
-    if (this.props.G.chainToMerge !== prevProps.G.chainToMerge) {
+    if (this.props.G.merger?.chainToMerge !== prevProps.G.merger?.chainToMerge) {
       // reset the merger dialog dismissed state
       this.setState({ mergerDetailsDismissed: false });
     }
@@ -372,7 +372,10 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
   }
 
   renderBreakMergerTieChain(message: string, move: string) {
-    const chainSizes = this.props.G.mergingChains.map((c) => ({ chain: c, size: sizeOfChain(c, this.props.G.hotels) }));
+    const chainSizes = this.props.G.merger.mergingChains.map((c) => ({
+      chain: c,
+      size: sizeOfChain(c, this.props.G.hotels),
+    }));
     const biggestChainSize = chainSizes[0].size;
     const choices = chainSizes
       .filter((chainSize) => chainSize.size === biggestChainSize)
@@ -401,7 +404,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     const numToSell = this.state.stocksToSell || 0;
     return (
       <div className={css.WrapRow}>
-        <div className={css.RowLabel}>{`Do you want to exchange any ${this.props.G.chainToMerge} stock?`}</div>
+        <div className={css.RowLabel}>{`Do you want to exchange any ${this.props.G.merger.chainToMerge} stock?`}</div>
         <div className={css.SwapSellEntry}>
           <div className={css.SwapSellLabel}>Swap</div>
           <TextField
@@ -540,7 +543,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       return;
     }
 
-    const { chainToMerge, survivingChain } = this.props.G;
+    const { chainToMerge, survivingChain } = this.props.G.merger;
 
     const onClose = () => this.setState({ mergerDetailsDismissed: true });
 
@@ -548,7 +551,17 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       const name = this.props.gameArgs.players[player.id].name;
       return (
         <div>
-          {name} has {player.stocks[chainToMerge]}
+          {name} has {this.props.G.merger.stockCounts[player.id]}
+        </div>
+      );
+    };
+
+    const renderBonus = (playerID) => {
+      const name = this.props.gameArgs.players[playerID].name;
+      const bonus = this.props.G.merger.bonuses[playerID];
+      return (
+        <div>
+          {name} gets ${bonus}
         </div>
       );
     };
@@ -565,8 +578,10 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
               .filter((p) => !!p.stocks[chainToMerge])
               .sort((a, b) => b.stocks[chainToMerge] - a.stocks[chainToMerge])
               .map(renderStockCount)}
-            <div>Majority bonus: ${majorityBonus(this.props.G, chainToMerge)}</div>
-            <div>Minority bonus: ${minorityBonus(this.props.G, chainToMerge)}</div>
+            <div>The bonuses are as follows: </div>
+            {Object.keys(this.props.G.merger.bonuses)
+              .sort((a, b) => this.props.G.merger.bonuses[a] - this.props.G.merger.bonuses[b])
+              .map(renderBonus)}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
