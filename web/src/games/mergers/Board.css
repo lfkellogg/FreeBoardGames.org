@@ -226,3 +226,11 @@ div {
   background-color: #c2185b; /* material pink 700 */
   color: white;
 }
+
+.MarginTopBottom {
+  margin: 10px 0;
+}
+
+.MarginLeft {
+  margin-left: 10px;
+}

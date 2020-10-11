@@ -1,6 +1,6 @@
 import { INVALID_MOVE } from 'boardgame.io/core';
 import { Game, Ctx } from 'boardgame.io';
-import { Chain, Hotel, Player, IG } from './types';
+import { Chain, Hotel, Player, IG, Merger } from './types';
 import {
   adjacentHotels,
   getColumn,
@@ -286,9 +286,15 @@ export function declareGameOver(G: IG, ctx: Ctx, isGameOver: boolean) {
       G.hotels
         .flat()
         .map((h) => h.chain)
+        .sort((a, b) => sizeOfChain(a, G.hotels) - sizeOfChain(b, G.hotels))
         .filter((c) => !!c),
     );
-    chains.forEach((c) => awardBonuses(G, c));
+    const finalMergers = [];
+    chains.forEach((c) => {
+      const mergerResults = getMergerResults(G, c);
+      finalMergers.push(mergerResults);
+      awardMoneyToPlayers(G, mergerResults.bonuses);
+    });
 
     // sell off all remaining stock in those chains
     chains.forEach((c) => {
@@ -304,12 +310,14 @@ export function declareGameOver(G: IG, ctx: Ctx, isGameOver: boolean) {
       });
     });
 
+    // build gameover object
     let playerArray = Object.values(G.players);
     playerArray = playerArray.slice(0, playerArray.length);
     playerArray.sort((a, b) => b.money - a.money);
     const winningScore = playerArray[0].money;
     const winners = playerArray.filter((p) => p.money === winningScore).map((p) => p.id);
     ctx.events.endGame({
+      declaredBy: ctx.playerID,
       winner: winners.length === 1 ? winners[0] : undefined,
       winners: winners.length > 1 ? winners : undefined,
       scores: playerArray.map((p) => ({
@@ -317,6 +325,7 @@ export function declareGameOver(G: IG, ctx: Ctx, isGameOver: boolean) {
         money: p.money,
         winner: p.money === winningScore,
       })),
+      finalMergers,
     });
     ctx.events.endTurn();
     ctx.events.endStage();
@@ -434,6 +443,27 @@ export function mergerPhaseNextTurn(G: IG, ctx: Ctx, isFirst: boolean = false) {
   // return a value to avoid from ending the phase that way, which preempts the setPhase call
   // we also want to set the merging player as the next turn regardless
   return mergingPlayerPos;
+}
+
+export function getMergerResults(G: IG, chainToMerge: Chain): Merger {
+  const stockCounts = {};
+  const swapAndSells = {};
+  for (const player of Object.values(G.players)) {
+    const numStock = player.stocks[chainToMerge];
+    stockCounts[player.id] = numStock;
+    if (numStock === 0) {
+      // for folks that have no stock, prefill their swaps/sells to empty so they're skipped
+      swapAndSells[player.id] = { swap: 0, sell: 0 };
+    }
+  }
+
+  const bonuses = getBonuses(G, chainToMerge);
+  return {
+    chainToMerge,
+    stockCounts,
+    swapAndSells,
+    bonuses,
+  };
 }
 
 export const MergersGame: Game<IG> = {
@@ -571,25 +601,12 @@ export const MergersGame: Game<IG> = {
 
       onBegin: (G: IG) => {
         // now that we now which chain is being merged, fill in the rest of the merger info
-        const stockCounts = {};
-        const swapAndSells = {};
-        for (const player of Object.values(G.players)) {
-          const numStock = player.stocks[G.merger.chainToMerge];
-          stockCounts[player.id] = numStock;
-          if (numStock === 0) {
-            // for folks that have no stock, prefill their swaps/sells to empty so they're skipped
-            swapAndSells[player.id] = { swap: 0, sell: 0 };
-          }
-        }
-
-        const bonuses = getBonuses(G, G.merger.chainToMerge);
+        const mergerResults: Merger = getMergerResults(G, G.merger.chainToMerge);
         G.merger = {
           ...G.merger,
-          stockCounts,
-          swapAndSells,
-          bonuses,
+          ...mergerResults,
         };
-        awardMoneyToPlayers(G, bonuses);
+        awardMoneyToPlayers(G, G.merger.bonuses);
       },
 
       onEnd: (G: IG) => {
