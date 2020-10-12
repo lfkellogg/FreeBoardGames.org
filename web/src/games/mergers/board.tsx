@@ -8,7 +8,7 @@ import { IGameArgs } from 'gamesShared/definitions/game';
 import { GameLayout } from 'gamesShared/components/fbg/GameLayout';
 import { Ctx } from 'boardgame.io';
 import { Chain, Hotel, IG, Merger, Score } from './types';
-import { fillStockMap, isUnplayable, priceOfStock, sizeOfChain } from './utils';
+import { fillStockMap, isUnplayable, priceOfStock, priceOfStockBySize, sizeOfChain } from './utils';
 import css from './Board.css';
 import { DialogActions, DialogContent, DialogContentText } from '@material-ui/core';
 
@@ -266,11 +266,15 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
   }
 
   renderAvailableStock(chain: Chain) {
-    const stockPrice = priceOfStock(chain, this.props.G.hotels);
+    const size = sizeOfChain(chain, this.props.G.hotels);
+    const stockPrice = priceOfStockBySize(chain, size);
+    const stockPriceMessage = stockPrice === undefined ? '--' : `$${stockPrice}`;
+    const hotelSizeMessage = stockPrice === undefined ? '' : ` (${size})`;
     return (
       <div key={`available-stock-${chain}`} className={css.AvailableStockAndPrice}>
         {this.renderStock(chain, this.props.G.availableStocks[chain])}
-        {stockPrice === undefined ? '--' : `$${stockPrice}`}
+        {stockPriceMessage}
+        {hotelSizeMessage}
       </div>
     );
   }

@@ -91,7 +91,10 @@ export function sizeOfChain(chain: Chain, hotels: Hotel[][]): number {
 }
 
 export function priceOfStock(chain: Chain, hotels: Hotel[][]): number | undefined {
-  const size = sizeOfChain(chain, hotels);
+  return priceOfStockBySize(chain, sizeOfChain(chain, hotels));
+}
+
+export function priceOfStockBySize(chain: Chain, size: number): number | undefined {
   if (size === 0) {
     return undefined;
   }
