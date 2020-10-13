@@ -24,6 +24,7 @@ interface IBoardState {
   stocksToBuy: Record<Chain, string>;
   mergerDetailsDismissed: boolean;
   gameOverDetailsDismissed: boolean;
+  showPriceCard: boolean;
   stocksToSwap?: number;
   stocksToSell?: number;
   hoveredHotel?: string;
@@ -53,6 +54,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       },
       mergerDetailsDismissed: false,
       gameOverDetailsDismissed: false,
+      showPriceCard: false,
     };
   }
 
@@ -261,6 +263,10 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
             </div>
           );
         })}
+        <div className={css.Spacer}></div>
+        <Button variant="text" color="primary" onClick={() => this.setState({ showPriceCard: true })}>
+          Show Guide
+        </Button>
       </div>
     );
   }
@@ -640,6 +646,84 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     );
   }
 
+  maybeRenderPriceCard() {
+    const onClose = () => this.setState({ showPriceCard: false });
+
+    const indexToCountMap = {
+      0: '-',
+      1: '-',
+      2: '2',
+      3: '3',
+      4: '4',
+      5: '5',
+      6: '6-10',
+      7: '11-20',
+      8: '21-30',
+      9: '31-40',
+      10: '41 & over',
+      11: '-',
+      12: '-',
+    };
+
+    const rows = [];
+
+    const headerCells = [];
+    headerCells.push(
+      <th key="Header1">
+        Tower
+        <br />
+        Luxor
+      </th>,
+    );
+    headerCells.push(
+      <th key="Header2">
+        American
+        <br />
+        Worldwide
+        <br />
+        Festival
+      </th>,
+    );
+    headerCells.push(
+      <th key="Header3">
+        Imperial
+        <br />
+        Continental
+      </th>,
+    );
+    headerCells.push(<th key="Header4">Stock price</th>);
+    headerCells.push(<th key="Header5">First bonus</th>);
+    headerCells.push(<th key="Header6">Second bonus</th>);
+    rows.push(<tr key="Headers">{headerCells}</tr>);
+
+    for (let i = 2; i < 13; i++) {
+      const cells = [];
+      cells.push(<td key={`Tier1-${i}`}>{indexToCountMap[i]}</td>);
+      cells.push(<td key={`Tier2-${i}`}>{indexToCountMap[i - 1]}</td>);
+      cells.push(<td key={`Tier3-${i}`}>{indexToCountMap[i - 2]}</td>);
+      cells.push(<td key={`Price-${i}`}>${i * 100}</td>);
+      cells.push(<td key={`Bonus1-${i}`}>${i * 1000}</td>);
+      cells.push(<td key={`Bonus2-${i}`}>${(i * 1000) / 2}</td>);
+      rows.push(<tr key={`Row-${i}`}>{cells}</tr>);
+    }
+
+    return (
+      <Dialog onClose={onClose} aria-labelledby="merger-dialog-title" open={this.state.showPriceCard}>
+        <DialogTitle id="merger-dialog-title">Stock Price and Bonus by Number of Stock</DialogTitle>
+        <DialogContent>
+          <table className={`${css.Mergers} ${css.TableBorders}`}>
+            <tbody>{rows}</tbody>
+          </table>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose} color="primary" autoFocus>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
+
   maybeRenderGameOverDetails() {
     if (!this.props.ctx.gameover) {
       return;
@@ -651,10 +735,10 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     const declaredByName = this.props.gameArgs.players[declaredBy].name;
 
     return (
-      <Dialog onClose={onClose} aria-labelledby="merger-dialog-title" open={!this.state.gameOverDetailsDismissed}>
-        <DialogTitle id="merger-dialog-title">{this.winnerMessage()}</DialogTitle>
+      <Dialog onClose={onClose} aria-labelledby="game-over-title" open={!this.state.gameOverDetailsDismissed}>
+        <DialogTitle id="game-over-title">{this.winnerMessage()}</DialogTitle>
         <DialogContent>
-          <DialogContentText id="merger-dialog-description">
+          <DialogContentText id="game-over-description">
             <div>{declaredByName} has declared the game over.</div>
             <div>{this.renderFinalScores()}</div>
             <div className={css.MarginTopBottom}>
@@ -680,7 +764,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     // console.log('activePlayers', this.props.ctx.activePlayers);
     return (
       <GameLayout allowWiderScreen={true} gameArgs={this.props.gameArgs}>
-        <div className={css.MergersLayout}>
+        <div className={`${css.MergersLayout} ${css.Mergers}`}>
           {this.renderPlayers()}
           {this.renderAvailableStocks()}
           {this.renderLastMove()}
@@ -689,6 +773,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
           {this.renderPlayerStatus()}
           {this.maybeRenderMergerDetails()}
           {this.maybeRenderGameOverDetails()}
+          {this.maybeRenderPriceCard()}
         </div>
       </GameLayout>
     );
