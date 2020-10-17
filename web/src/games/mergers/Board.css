@@ -1,16 +1,30 @@
-div {
+.Mergers {
+  background-color: white;
+  color: var(--mergers-dark-grey);
+  font-family: 'Roboto';
+  font-size: 1.25em;
+
+  /* Shared colors */
+  --mergers-light-grey: #e0e0e0; /* material gray 300 */
+  --mergers-dark-grey: #212121; /* material gray 900 */
+  --mergers-blue-grey: #455a64; /* material blue-gray 700 */
+
+  /* Chain colors */
+  --chain-color-tower: #fbc02d; /* material yellow 700 */
+  --chain-color-luxor: #d32f2f; /* material red 700 */
+  --chain-color-festival: #2e7d32; /* material green 800 */
+  --chain-color-american: #1565c0; /* material blue 800 */
+  --chain-color-worldwide: #6d4c41; /* material brown 600 */
+  --chain-color-continental: #00838f; /* material teal 800 */
+  --chain-color-imperial: #c2185b; /* material pink 700 */
+}
+
+.Mergers div {
   box-sizing: border-box;
 }
 
-.Mergers {
-  background-color: white;
-  color: #455a64;
-  font-family: 'Roboto';
-}
-
-.MergersLayout {
+.MergersContainer {
   padding: 1em;
-  font-size: 1.25em;
 }
 
 .ErrorText {
@@ -94,6 +108,10 @@ div {
 }
 
 .Actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   border: 0.25em solid black;
   border-radius: 0.25em;
   padding: 0 0.5em;
@@ -118,11 +136,47 @@ div {
   margin: 0;
 }
 
-.Hotel.PlayerStockLabel {
+.PlayerStockLabel {
   height: 2em;
   width: 1.5em;
   margin-right: 0.25em;
   font-size: 1em;
+  border-radius: 0.25em;
+  border: 0.25em solid transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: white;
+}
+
+.PlayerStockLabel.Tower {
+  background-color: var(--chain-color-tower);
+}
+
+.PlayerStockLabel.Luxor {
+  background-color: var(--chain-color-luxor);
+}
+
+.PlayerStockLabel.Festival {
+  background-color: var(--chain-color-festival);
+}
+
+.PlayerStockLabel.American {
+  background-color: var(--chain-color-american);
+}
+
+.PlayerStockLabel.Worldwide {
+  background-color: var(--chain-color-worldwide);
+}
+
+.PlayerStockLabel.Continental {
+  background-color: var(--chain-color-continental);
+}
+
+.PlayerStockLabel.Imperial {
+  background-color: var(--chain-color-imperial);
 }
 
 .SwapSellEntry {
@@ -134,104 +188,6 @@ div {
 .SwapSellLabel {
   margin-right: 0.25em;
   font-size: 1em;
-}
-
-.Board {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 1em 0;
-}
-
-.Label {
-  line-height: 100%;
-  text-align: center;
-  box-sizing: border-box;
-  font-size: 0.75em;
-  color: #455a64;
-}
-
-.Hotel {
-  height: 5vw;
-  width: 5vw;
-  max-width: 5vh;
-  max-height: 5vh;
-  border-radius: 0.25em;
-  text-align: center;
-  box-sizing: border-box;
-  border: 0.25em solid transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.StarIcon {
-  height: 1em;
-  width: 1em;
-}
-
-.Hotel .LabelContainer {
-  font-size: 1em;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.Hotel.Empty {
-  background-color: #e0e0e0; /* material gray 300 */
-  color: black;
-}
-
-.Hotel.InRack {
-  background-color: #e0e0e0; /* material gray 300 */
-  border-color: #455a64;
-  border-style: dashed;
-  color: black;
-}
-
-.Hotel.InRack.Hover {
-  cursor: pointer;
-  background-color: #455a64; /* material blue-gray 700 */
-}
-
-.Hotel.Unclaimed {
-  background-color: #455a64; /* material blue-gray 700 */
-  color: white;
-}
-
-.Hotel.Tower {
-  background-color: #fbc02d; /* material yellow 700 */
-  color: white;
-}
-
-.Hotel.Luxor {
-  background-color: #d32f2f; /* material red 700 */
-  color: white;
-}
-
-.Hotel.Festival {
-  background-color: #2e7d32; /* material green 800 */
-  color: white;
-}
-
-.Hotel.American {
-  background-color: #1565c0; /* material blue 800 */
-  color: white;
-}
-
-.Hotel.Worldwide {
-  background-color: #6d4c41; /* material brown 600 */
-  color: white;
-}
-
-.Hotel.Continental {
-  background-color: #00838f; /* material teal 800 */
-  color: white;
-}
-
-.Hotel.Imperial {
-  background-color: #c2185b; /* material pink 700 */
-  color: white;
 }
 
 .MarginTopBottom {

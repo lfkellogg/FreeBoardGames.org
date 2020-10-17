@@ -17,23 +17,14 @@ import {
   roundDownToNearest2,
   setupInitialState,
   sizeOfChain,
+  playerHotels,
 } from './utils';
-
-export function moveHotelToBoard(G: IG, hotel: Hotel) {
-  hotel.hasBeenPlaced = true;
-  if (hotel.drawnByPlayer) {
-    const player: Player = G.players[hotel.drawnByPlayer];
-    const playerHotels = player.hotels;
-    const indexInRack = playerHotels.findIndex((h) => h.id === hotel.id);
-    player.hotels.splice(indexInRack, 1);
-  }
-}
 
 export function placeHotel(G: IG, ctx: Ctx, id?: string) {
   if (!id) {
-    const playerHotels = G.players[ctx.playerID].hotels;
-    const hasPlayableHotels = !!playerHotels.find((h) => !isUnplayable(G, h));
-    if (hasPlayableHotels && playerHotels.length > 0) {
+    const hotels = playerHotels(G, ctx.playerID);
+    const hasPlayableHotels = !!hotels.find((h) => !isUnplayable(G, h));
+    if (hasPlayableHotels && hotels.length > 0) {
       return INVALID_MOVE;
     }
     G.lastMove = `Player ${ctx.playerID} doesn't have any playable hotels`;
@@ -45,7 +36,7 @@ export function placeHotel(G: IG, ctx: Ctx, id?: string) {
   if (hotel.hasBeenPlaced || hotel.drawnByPlayer !== ctx.playerID || isUnplayable(G, hotel)) {
     return INVALID_MOVE;
   }
-  moveHotelToBoard(G, hotel);
+  hotel.hasBeenPlaced = true;
   G.lastPlacedHotel = id;
 
   const adjacent = adjacentHotels(G, hotel);
@@ -154,8 +145,16 @@ export function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
 }
 
 export function drawHotels(G: IG, ctx: Ctx) {
+  // first, find and remove any of this player's unplayable tiles
   const player: Player = G.players[ctx.playerID];
-  const hotelsToDraw: number = 6 - player.hotels.length;
+  playerHotels(G, player.id)
+    .filter((h) => isPermanentlyUnplayable(G, h))
+    .forEach((h) => {
+      h.drawnByPlayer = undefined;
+      h.hasBeenRemoved = true;
+    });
+
+  const hotelsToDraw: number = 6 - playerHotels(G, player.id).length;
   for (let i = 0; i < hotelsToDraw; i++) {
     assignRandomHotel(G, ctx, player);
   }
@@ -168,20 +167,15 @@ export function assignRandomHotel(G: IG, ctx: Ctx, player: Player): boolean {
   if (!hotel) {
     return false;
   }
-  assignHotelToPlayer(hotel, player);
+  hotel.drawnByPlayer = player.id;
   return true;
 }
 
 export function getRandomHotel(G: IG, ctx: Ctx): Hotel | undefined {
-  const undrawnHotels = G.hotels.flat().filter((h) => !h.drawnByPlayer && !isUnplayable(G, h));
+  const undrawnHotels = G.hotels.flat().filter((h) => !h.drawnByPlayer && !h.hasBeenRemoved);
   if (undrawnHotels.length > 0) {
     return undrawnHotels[Math.floor(ctx.random.Number() * undrawnHotels.length)];
   }
-}
-
-export function assignHotelToPlayer(hotel: Hotel, player: Player) {
-  hotel.drawnByPlayer = player.id;
-  player.hotels.push(hotel);
 }
 
 export function firstBuildTurn(G: IG, ctx: Ctx): number {
@@ -383,7 +377,7 @@ export function setupInitialDrawing(G: IG, ctx: Ctx) {
 
     // initial random drawing + placement
     assignRandomHotel(G, ctx, player);
-    moveHotelToBoard(G, player.hotels[0]);
+    playerHotels(G, player.id)[0].hasBeenPlaced = true;
 
     // draw 6 more tiles
     for (let j = 0; j < 6; j++) {
@@ -500,19 +494,6 @@ export const MergersGame: Game<IG> = {
         },
 
         activePlayers: { currentPlayer: 'placeHotelStage' },
-
-        onEnd: (G: IG) => {
-          // find and mark any unplayable tiles, and remove from players' racks
-          // TODO: maybe move this, gets triggered on merger, for example
-          G.hotels
-            .flat()
-            .filter((h) => isPermanentlyUnplayable(G, h) && h.drawnByPlayer)
-            .forEach((h) => {
-              const player: Player = G.players[h.drawnByPlayer];
-              player.hotels = player.hotels.filter((h2) => h2.id !== h.id);
-              h.drawnByPlayer = undefined;
-            });
-        },
 
         stages: {
           placeHotelStage: {

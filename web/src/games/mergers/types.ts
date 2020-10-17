@@ -30,13 +30,13 @@ export interface Hotel {
   hasBeenPlaced?: boolean;
   drawnByPlayer?: string;
   chain?: Chain;
+  hasBeenRemoved?: boolean;
 }
 
 export interface Player {
   id?: string;
   money?: number;
   stocks?: Record<Chain, number>;
-  hotels?: Hotel[];
 }
 
 export interface Score {

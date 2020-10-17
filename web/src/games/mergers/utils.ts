@@ -35,7 +35,6 @@ export function setupPlayers(numPlayers: number): Record<string, Player> {
       id,
       money: 6000,
       stocks: fillStockMap(0),
-      hotels: [],
     };
   }
   return players;
@@ -84,6 +83,10 @@ export function adjacentHotels(G: IG, hotel: Hotel): Hotel[] {
       (h) =>
         (Math.abs(getRow(h) - r) === 1 && getColumn(h) === c) || (Math.abs(getColumn(h) - c) === 1 && getRow(h) === r),
     );
+}
+
+export function playerHotels(G: IG, playerID: string) {
+  return G.hotels.flat().filter((h) => h.drawnByPlayer === playerID && !h.hasBeenPlaced && !h.hasBeenRemoved);
 }
 
 export function sizeOfChain(chain: Chain, hotels: Hotel[][]): number {

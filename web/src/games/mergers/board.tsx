@@ -3,16 +3,17 @@ import Button from '@material-ui/core/Button';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import Dialog from '@material-ui/core/Dialog';
 import TextField from '@material-ui/core/TextField';
-import StarIcon from '@material-ui/icons/Star';
 import { IGameArgs } from 'gamesShared/definitions/game';
 import { GameLayout } from 'gamesShared/components/fbg/GameLayout';
 import { Ctx } from 'boardgame.io';
-import { Chain, Hotel, IG, Merger, Score } from './types';
-import { fillStockMap, isUnplayable, priceOfStock, priceOfStockBySize, sizeOfChain } from './utils';
-import css from './Board.css';
 import { DialogActions, DialogContent, DialogContentText } from '@material-ui/core';
 
-interface IBoardProps {
+import css from './Board.css';
+import { HotelGrid } from './components/HotelGrid';
+import { Chain, IG, Merger, Score } from './types';
+import { fillStockMap, isUnplayable, playerHotels, priceOfStock, priceOfStockBySize, sizeOfChain } from './utils';
+
+interface BoardProps {
   G: IG;
   ctx: Ctx;
   moves: any;
@@ -20,28 +21,25 @@ interface IBoardProps {
   gameArgs?: IGameArgs;
 }
 
-interface IBoardState {
+interface BoardState {
   stocksToBuy: Record<Chain, string>;
   mergerDetailsDismissed: boolean;
   gameOverDetailsDismissed: boolean;
   showPriceCard: boolean;
   stocksToSwap?: number;
   stocksToSell?: number;
-  hoveredHotel?: string;
 }
 
 // TODO:
-//  - show card w/ prices and bonuses
 //  - animations
+//  - sounds
 //  - fix layout on small screens
 //  - add validation to swap/sell stock
-export class Board extends React.Component<IBoardProps, IBoardState> {
+//  - test what happens around unplayable tiles (e.g. if all tiles are unplayable)
+//  - test drawHotels()
+export class Board extends React.Component<BoardProps, BoardState> {
   constructor(props) {
     super(props);
-    this.renderHotel = this.renderHotel.bind(this);
-    this.renderHotelRow = this.renderHotelRow.bind(this);
-    this.renderHotelInRack = this.renderHotelInRack.bind(this);
-    this.renderMergerDetails = this.renderMergerDetails.bind(this);
     this.state = {
       stocksToBuy: {
         Tower: '',
@@ -79,18 +77,6 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
 
   playerMetadata() {
     return this.props.gameArgs.players[this.playerID()];
-  }
-
-  getClassName(hotel: Hotel) {
-    if (!hotel.hasBeenPlaced) {
-      return hotel.drawnByPlayer === this.playerID() ? css.InRack : css.Empty;
-    }
-
-    if (!hotel.chain) {
-      return css.Unclaimed;
-    }
-
-    return css[hotel.chain];
   }
 
   parseNumber(text: string): number {
@@ -137,96 +123,11 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     return '';
   }
 
-  renderHotel(chainTiles: {}, hotel: Hotel) {
-    const isHovered = this.state.hoveredHotel === hotel.id;
-    const placingHotel =
-      this.props.ctx.activePlayers && this.props.ctx.activePlayers[this.playerIndex()] === 'placeHotelStage';
-    const hoverClass = placingHotel && isHovered ? css.Hover : '';
-    const isLastPlaced = this.props.G.lastPlacedHotel === hotel.id;
-    const lastPlacedLabel = isLastPlaced ? <StarIcon style={{ fontSize: '1.25em' }}></StarIcon> : '';
-    return (
-      <td key={hotel.id}>
-        <div
-          className={`${css.Hotel} ${this.getClassName(hotel)} ${hoverClass}`}
-          onClick={() => this.props.moves.placeHotel(hotel.id)}
-          onMouseEnter={() => this.setState({ hoveredHotel: hotel.id })}
-          onMouseLeave={() => this.setState({ hoveredHotel: undefined })}
-        >
-          <div className={css.LabelContainer}>{lastPlacedLabel || chainTiles[hotel.id]}</div>
-        </div>
-      </td>
-    );
-  }
-
-  renderHotelRow(chainTiles: {}, row: Hotel[], i: number) {
-    return (
-      <tr key={`hotel-row-${i}`} className={css.HotelRow}>
-        <td key={`row-header-${i}`}>
-          <div className={css.Label}>{['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'][i]}</div>
-        </td>
-        {row.map(this.renderHotel.bind(this, chainTiles))}
-      </tr>
-    );
-  }
-
-  renderColumnHeaders() {
-    const headers = [];
-    // empty header for the top left corner
-    headers.push(<td key="header-corner" className={css.Label}></td>);
-    for (let i = 0; i < 12; i++) {
-      headers.push(
-        <td key={`header-${i + 1}`} className={css.Label}>
-          {i + 1}
-        </td>,
-      );
-    }
-    return <tr>{headers}</tr>;
-  }
-
-  renderBoard() {
-    const chainTiles = {};
-    for (const key of Object.keys(Chain)) {
-      const chain = Chain[key];
-      const firstHotel = this.props.G.hotels
-        .flat()
-        .find((h) => h.chain === chain && h.id !== this.props.G.lastPlacedHotel);
-      if (firstHotel) {
-        chainTiles[firstHotel.id] = chain[0]; // first letter of chain
-      }
-    }
-    return (
-      <div className={css.Board}>
-        <table>
-          <tbody>
-            {this.renderColumnHeaders()}
-            {this.props.G.hotels.map(this.renderHotelRow.bind(this, chainTiles))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  renderHotelInRack(hotel: Hotel) {
-    const hoverClass = this.state.hoveredHotel === hotel.id ? css.Hover : '';
-    return (
-      <div key={`hotel-in-rack-${hotel.id}`} className={`${css.InRackWrapper} ${hoverClass}`}>
-        <div
-          className={`${css.Hotel} ${this.getClassName(hotel)} ${hoverClass}`}
-          onClick={() => this.props.moves.placeHotel(hotel.id)}
-          onMouseEnter={() => this.setState({ hoveredHotel: hotel.id })}
-          onMouseLeave={() => this.setState({ hoveredHotel: undefined })}
-        >
-          {hotel.id}
-        </div>
-      </div>
-    );
-  }
-
   renderStockLabel(chain: Chain, onClick?: () => void) {
     return (
       <div
         key={`stock-label-${chain}`}
-        className={`${css.Hotel} ${css[chain]} ${css.PlayerStockLabel} ${onClick ? css.Clickable : ''}`}
+        className={`${css.PlayerStockLabel} ${css[chain]} ${onClick ? css.Clickable : ''}`}
         onClick={onClick}
       >
         {chain[0]}
@@ -425,7 +326,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
             placeholder="#"
             value={this.state.stocksToSwap || ''}
             onChange={(e) => {
-              let n = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+              let n = e.target.value === '' ? 0 : Number(e.target.value);
               if (Number.isNaN(n)) {
                 n = 0;
               }
@@ -442,7 +343,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
             placeholder="#"
             value={this.state.stocksToSell || ''}
             onChange={(e) => {
-              let n = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+              let n = e.target.value === '' ? 0 : Number(e.target.value);
               if (Number.isNaN(n)) {
                 n = 0;
               }
@@ -494,7 +395,9 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
       //console.log('stage: ', stage);
       switch (stage) {
         case 'placeHotelStage':
-          const hasPlayableHotel = !!this.playerState().hotels.find((h) => !isUnplayable(this.props.G, h));
+          const hasPlayableHotel = !!playerHotels(this.props.G, this.playerID()).find(
+            (h) => !isUnplayable(this.props.G, h),
+          );
           if (!hasPlayableHotel) {
             content = this.renderButton('Continue (you have no playable hotels)', () => this.props.moves.placeHotel());
           } else {
@@ -745,7 +648,7 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
               <div>
                 <b>Final payouts</b>
               </div>
-              {finalMergers.map(this.renderMergerDetails)}
+              {finalMergers.map((merger) => this.renderMergerDetails(merger))}
             </div>
           </DialogContentText>
         </DialogContent>
@@ -764,11 +667,18 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
     // console.log('activePlayers', this.props.ctx.activePlayers);
     return (
       <GameLayout allowWiderScreen={true} gameArgs={this.props.gameArgs}>
-        <div className={`${css.MergersLayout} ${css.Mergers}`}>
+        <div className={`${css.Mergers} ${css.MergersContainer}`}>
           {this.renderPlayers()}
           {this.renderAvailableStocks()}
           {this.renderLastMove()}
-          {this.renderBoard()}
+          <HotelGrid
+            hotels={this.props.G.hotels}
+            lastPlacedHotel={this.props.G.lastPlacedHotel}
+            playOrder={this.props.ctx.playOrder}
+            activePlayers={this.props.ctx.activePlayers}
+            playerID={this.props.playerID}
+            onHotelClicked={this.props.moves.placeHotel}
+          ></HotelGrid>
           {this.renderActions()}
           {this.renderPlayerStatus()}
           {this.maybeRenderMergerDetails()}
