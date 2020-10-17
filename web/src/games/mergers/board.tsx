@@ -10,6 +10,7 @@ import { DialogActions, DialogContent, DialogContentText } from '@material-ui/co
 
 import css from './Board.css';
 import { HotelGrid } from './components/HotelGrid';
+import { StockGuide } from './components/StockGuide';
 import { Chain, IG, Merger, Score } from './types';
 import { fillStockMap, isUnplayable, playerHotels, priceOfStock, priceOfStockBySize, sizeOfChain } from './utils';
 
@@ -31,6 +32,7 @@ interface BoardState {
 }
 
 // TODO:
+//  - refactor out actions area
 //  - animations
 //  - sounds
 //  - fix layout on small screens
@@ -552,71 +554,11 @@ export class Board extends React.Component<BoardProps, BoardState> {
   maybeRenderPriceCard() {
     const onClose = () => this.setState({ showPriceCard: false });
 
-    const indexToCountMap = {
-      0: '-',
-      1: '-',
-      2: '2',
-      3: '3',
-      4: '4',
-      5: '5',
-      6: '6-10',
-      7: '11-20',
-      8: '21-30',
-      9: '31-40',
-      10: '41 & over',
-      11: '-',
-      12: '-',
-    };
-
-    const rows = [];
-
-    const headerCells = [];
-    headerCells.push(
-      <th key="Header1">
-        Tower
-        <br />
-        Luxor
-      </th>,
-    );
-    headerCells.push(
-      <th key="Header2">
-        American
-        <br />
-        Worldwide
-        <br />
-        Festival
-      </th>,
-    );
-    headerCells.push(
-      <th key="Header3">
-        Imperial
-        <br />
-        Continental
-      </th>,
-    );
-    headerCells.push(<th key="Header4">Stock price</th>);
-    headerCells.push(<th key="Header5">First bonus</th>);
-    headerCells.push(<th key="Header6">Second bonus</th>);
-    rows.push(<tr key="Headers">{headerCells}</tr>);
-
-    for (let i = 2; i < 13; i++) {
-      const cells = [];
-      cells.push(<td key={`Tier1-${i}`}>{indexToCountMap[i]}</td>);
-      cells.push(<td key={`Tier2-${i}`}>{indexToCountMap[i - 1]}</td>);
-      cells.push(<td key={`Tier3-${i}`}>{indexToCountMap[i - 2]}</td>);
-      cells.push(<td key={`Price-${i}`}>${i * 100}</td>);
-      cells.push(<td key={`Bonus1-${i}`}>${i * 1000}</td>);
-      cells.push(<td key={`Bonus2-${i}`}>${(i * 1000) / 2}</td>);
-      rows.push(<tr key={`Row-${i}`}>{cells}</tr>);
-    }
-
     return (
       <Dialog onClose={onClose} aria-labelledby="merger-dialog-title" open={this.state.showPriceCard}>
         <DialogTitle id="merger-dialog-title">Stock Price and Bonus by Number of Stock</DialogTitle>
         <DialogContent>
-          <table className={`${css.Mergers} ${css.TableBorders}`}>
-            <tbody>{rows}</tbody>
-          </table>
+          <StockGuide></StockGuide>
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose} color="primary" autoFocus>

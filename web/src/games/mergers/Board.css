@@ -197,21 +197,3 @@
 .MarginLeft {
   margin-left: 10px;
 }
-
-table.TableBorders {
-  border-collapse: collapse;
-}
-
-table.TableBorders {
-  border: 1px solid black;
-}
-
-table.TableBorders th {
-  border: 1px solid black;
-}
-
-table.TableBorders td {
-  border: 1px solid black;
-  text-align: center;
-  vertical-align: middle;
-}
