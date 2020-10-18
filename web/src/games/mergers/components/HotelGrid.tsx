@@ -83,22 +83,6 @@ export class HotelGrid extends React.Component<HotelGridProps, HotelGridState> {
     return <tr>{headers}</tr>;
   }
 
-  renderHotelInRack(hotel: Hotel) {
-    const hoverClass = this.state.hoveredHotel === hotel.id ? css.Hover : '';
-    return (
-      <div key={`hotel-in-rack-${hotel.id}`} className={`${css.InRackWrapper} ${hoverClass}`}>
-        <div
-          className={`${css.Hotel} ${this.hotelClass(hotel)} ${hoverClass}`}
-          onClick={() => this.props.onHotelClicked(hotel.id)}
-          onMouseEnter={() => this.setState({ hoveredHotel: hotel.id })}
-          onMouseLeave={() => this.setState({ hoveredHotel: undefined })}
-        >
-          {hotel.id}
-        </div>
-      </div>
-    );
-  }
-
   render() {
     const chainTiles = {};
     for (const key of Object.keys(Chain)) {

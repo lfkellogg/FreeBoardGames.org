@@ -1,13 +1,4 @@
-.StockGuide {
-  --mergers-dark-grey: #212121; /* material gray 900 */
-  margin: 20px;
-  background-color: white;
-  color: var(--mergers-dark-grey);
-  font-family: 'Roboto';
-  font-size: 1.25em;
-}
-
-.StockGuide table {
+table.StockGuide {
   table-layout: fixed;
   border-collapse: collapse;
   border: 1px solid var(--mergers-dark-grey);

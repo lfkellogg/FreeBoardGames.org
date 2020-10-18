@@ -5,13 +5,6 @@ export interface IG {
   availableStocks?: Record<Chain, number>;
   lastPlacedHotel?: string;
   lastMove?: string;
-  // TODO: use this for mergers? replaces survivingChain, chainToMerge, and bonuses
-  // - on a merger, fill and use to display snapshot to players
-  // - pre-fill SwapAndSells with zeros for folks without any stock
-  // - phase flow
-  //   - first turn: start from merger player and find first without an entry
-  //   - next turn: find next without an entry
-  //   - end phase if: all entries are filled
   merger?: Merger;
 }
 

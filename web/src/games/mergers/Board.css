@@ -1,13 +1,14 @@
 .Mergers {
-  background-color: white;
-  color: var(--mergers-dark-grey);
-  font-family: 'Roboto';
   font-size: 1.25em;
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  color: var(--mergers-dark-grey);
 
-  /* Shared colors */
+  /* Mergers colors */
   --mergers-light-grey: #e0e0e0; /* material gray 300 */
   --mergers-dark-grey: #212121; /* material gray 900 */
   --mergers-blue-grey: #455a64; /* material blue-gray 700 */
+  --mergers-highlight-green: #76ff03; /* material light green A400 */
+  --mergers-error-red: #f44336; /* material red 500 */
 
   /* Chain colors */
   --chain-color-tower: #fbc02d; /* material yellow 700 */
@@ -23,13 +24,14 @@
   box-sizing: border-box;
 }
 
-.MergersContainer {
-  padding: 1em;
+.Mergers p {
+  margin-bottom: 0;
+  margin-top: 0;
 }
 
-.ErrorText {
-  color: #f44336; /* material red 500 */
-  font-size: 0.75em;
+.MergersContainer {
+  padding: 1em;
+  background-color: white;
 }
 
 .AvailableStockAndPrice {
@@ -37,22 +39,6 @@
   flex-direction: column;
   align-items: center;
   margin-right: 0.5em;
-}
-
-.Clickable {
-  cursor: pointer;
-}
-
-.Rack {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-
-.Rack .InRackWrapper {
-  height: 6em;
-  width: 6em;
-  margin: 0.5em;
 }
 
 .Player {
@@ -71,10 +57,6 @@
 }
 
 .PlayerMoney {
-  margin-right: 1em;
-}
-
-.RowLabel {
   margin-right: 1em;
 }
 
@@ -99,30 +81,6 @@
   margin-left: 1em;
 }
 
-.StockToBuy {
-  margin-right: 1em;
-}
-
-.BuyStockInput {
-  width: 1em;
-}
-
-.Actions {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  border: 0.25em solid black;
-  border-radius: 0.25em;
-  padding: 0 0.5em;
-  margin-top: 0.25em;
-  min-height: 3.5em;
-}
-
-.Actions.YourTurn {
-  border-color: #76ff03; /* material light green A400 */
-}
-
 .PlayerStock {
   display: flex;
   align-items: flex-end;
@@ -136,64 +94,23 @@
   margin: 0;
 }
 
-.PlayerStockLabel {
-  height: 2em;
-  width: 1.5em;
-  margin-right: 0.25em;
-  font-size: 1em;
-  border-radius: 0.25em;
-  border: 0.25em solid transparent;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: white;
-}
-
-.PlayerStockLabel.Tower {
-  background-color: var(--chain-color-tower);
-}
-
-.PlayerStockLabel.Luxor {
-  background-color: var(--chain-color-luxor);
-}
-
-.PlayerStockLabel.Festival {
-  background-color: var(--chain-color-festival);
-}
-
-.PlayerStockLabel.American {
-  background-color: var(--chain-color-american);
-}
-
-.PlayerStockLabel.Worldwide {
-  background-color: var(--chain-color-worldwide);
-}
-
-.PlayerStockLabel.Continental {
-  background-color: var(--chain-color-continental);
-}
-
-.PlayerStockLabel.Imperial {
-  background-color: var(--chain-color-imperial);
-}
-
-.SwapSellEntry {
-  display: flex;
-  align-items: center;
-  margin-right: 1em;
-}
-
-.SwapSellLabel {
-  margin-right: 0.25em;
-  font-size: 1em;
-}
-
 .MarginTopBottom {
-  margin: 10px 0;
+  margin-bottom: 1em !important;
+  margin-top: 1em !important;
+}
+
+.MarginBottom {
+  margin-bottom: 1em !important;
+}
+
+.MarginTop {
+  margin-top: 1em !important;
 }
 
 .MarginLeft {
-  margin-left: 10px;
+  margin-left: 1em;
+}
+
+.MarginRight {
+  margin-right: 1em;
 }

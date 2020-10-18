@@ -1,14 +1,15 @@
 import React from 'react';
-import { Board } from './board';
 import Enzyme from 'enzyme';
 import Adapter from 'enzyme-adapter-react-16';
-
+import { State } from 'boardgame.io';
+import { Client } from 'boardgame.io/client';
 import { GameMode } from 'gamesShared/definitions/mode';
 import { MergersGame } from './game';
 import { Chain, IG } from './types';
 import * as utils from './utils';
-import { Client } from 'boardgame.io/client';
-import { State } from 'boardgame.io';
+
+import { Board } from './board';
+import actionsCss from './PlayerActions.css';
 
 Enzyme.configure({ adapter: new Adapter() });
 
@@ -50,7 +51,7 @@ describe('#renderBuyStock', () => {
 
     setUpStateFn(state1);
 
-    return Enzyme.mount(<TestBoard G={state1.G} ctx={state1.ctx} moves={client.moves} playerID={'0'} />);
+    return Enzyme.mount(<TestBoard G={state1.G} ctx={state1.ctx} moves={client.moves} playerID="0" />);
   };
 
   const setUpHotel = (G: IG, id: string, chain?: Chain) => {
@@ -69,11 +70,11 @@ describe('#renderBuyStock', () => {
       state.G.players['0'].money = 0;
     });
 
-    comp.find('.BuyStockButton').at(0).simulate('click');
+    comp.find(`.${actionsCss.ActionButton}`).at(0).simulate('click');
 
     it('submits an empty order', () => {
       expect(comp.props().moves.buyStock).toHaveBeenCalledWith(utils.fillStockMap(0));
-      expect(comp.find('.BuyStockButton').at(0).props().disabled).toBeFalse();
+      expect(comp.find(`.${actionsCss.ActionButton}`).at(0).props().disabled).toBeFalse();
     });
   });
 
@@ -99,7 +100,7 @@ describe('#renderBuyStock', () => {
       .at(0)
       .simulate('change', { target: { name: 'stock-to-buy-input-Luxor', value: '1' } });
 
-    comp.find('.BuyStockButton').at(0).simulate('click');
+    comp.find(`.${actionsCss.ActionButton}`).at(0).simulate('click');
 
     it('submits the correct order', () => {
       expect(comp.props().moves.buyStock).toHaveBeenCalledWith({
@@ -107,7 +108,7 @@ describe('#renderBuyStock', () => {
         [Chain.Tower]: 2,
         [Chain.Luxor]: 1,
       });
-      expect(comp.find('.BuyStockButton').at(0).props().disabled).toBeFalse();
+      expect(comp.find(`.${actionsCss.ActionButton}`).at(0).props().disabled).toBeFalse();
     });
   });
 
@@ -133,11 +134,11 @@ describe('#renderBuyStock', () => {
       .at(0)
       .simulate('change', { target: { name: 'stock-to-buy-input-Luxor', value: '1' } });
 
-    comp.find('.BuyStockButton').at(0).simulate('click');
+    comp.find(`.${actionsCss.ActionButton}`).at(0).simulate('click');
 
     it('disables the Buy button', () => {
       expect(comp.props().moves.buyStock).not.toHaveBeenCalled();
-      expect(comp.find('.BuyStockButton').at(0).props().disabled).toBeTrue();
+      expect(comp.find(`.${actionsCss.ActionButton}`).at(0).props().disabled).toBeTrue();
     });
   });
 
@@ -159,11 +160,11 @@ describe('#renderBuyStock', () => {
       .at(0)
       .simulate('change', { target: { name: 'stock-to-buy-input-Tower', value: '2' } });
 
-    comp.find('.BuyStockButton').at(0).simulate('click');
+    comp.find(`.${actionsCss.ActionButton}`).at(0).simulate('click');
 
     it('disables the Buy button', () => {
       expect(comp.props().moves.buyStock).not.toHaveBeenCalled();
-      expect(comp.find('.BuyStockButton').at(0).props().disabled).toBeTrue();
+      expect(comp.find(`.${actionsCss.ActionButton}`).at(0).props().disabled).toBeTrue();
     });
   });
 
@@ -186,11 +187,11 @@ describe('#renderBuyStock', () => {
       .at(0)
       .simulate('change', { target: { name: 'stock-to-buy-input-Luxor', value: '2' } });
 
-    comp.find('.BuyStockButton').at(0).simulate('click');
+    comp.find(`.${actionsCss.ActionButton}`).at(0).simulate('click');
 
     it('disables the Buy button', () => {
       expect(comp.props().moves.buyStock).not.toHaveBeenCalled();
-      expect(comp.find('.BuyStockButton').at(0).props().disabled).toBeTrue();
+      expect(comp.find(`.${actionsCss.ActionButton}`).at(0).props().disabled).toBeTrue();
     });
   });
 
@@ -209,11 +210,11 @@ describe('#renderBuyStock', () => {
       .at(0)
       .simulate('change', { target: { name: 'stock-to-buy-input-Tower', value: 'oops' } });
 
-    comp.find('.BuyStockButton').at(0).simulate('click');
+    comp.find(`.${actionsCss.ActionButton}`).at(0).simulate('click');
 
     it('disables the Buy button', () => {
       expect(comp.props().moves.buyStock).not.toHaveBeenCalled();
-      expect(comp.find('.BuyStockButton').at(0).props().disabled).toBeTrue();
+      expect(comp.find(`.${actionsCss.ActionButton}`).at(0).props().disabled).toBeTrue();
     });
   });
 });

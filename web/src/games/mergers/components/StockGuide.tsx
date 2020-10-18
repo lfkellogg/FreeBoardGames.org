@@ -1,3 +1,4 @@
+import { Typography } from '@material-ui/core';
 import React from 'react';
 
 import css from './StockGuide.css';
@@ -62,8 +63,10 @@ export function StockGuide() {
   }
 
   return (
-    <table className={`${css.StockGuide}`}>
-      <tbody>{rows}</tbody>
-    </table>
+    <Typography component="div" variant="body1">
+      <table className={`${css.StockGuide}`}>
+        <tbody>{rows}</tbody>
+      </table>
+    </Typography>
   );
 }
