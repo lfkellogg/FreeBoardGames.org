@@ -1,7 +1,7 @@
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import { Ctx } from 'boardgame.io';
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { Chain, IG } from '../types';
 import { fillStockMap, isUnplayable, playerHotels, priceOfStock, sizeOfChain } from '../utils';
 
@@ -57,6 +57,14 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
     return Number(text);
   }
 
+  safeParseNumber(text: string): number {
+    const parsed = this.parseNumber(text);
+    if (Number.isNaN(parsed)) {
+      return 0;
+    }
+    return parsed;
+  }
+
   parseStocksToBuy(): Partial<Record<Chain, number>> {
     const parsed = {};
     for (const key of Object.keys(this.state.stocksToBuy)) {
@@ -102,14 +110,18 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
     );
   }
 
+  renderPlaceHotel() {
+    const hasPlayableHotel = !!playerHotels(this.props.G, this.playerID()).find((h) => !isUnplayable(this.props.G, h));
+    if (!hasPlayableHotel) {
+      const label = 'Continue (you have no playable hotels)';
+      return this.renderButton(label, this.props.moves.placeHotel);
+    } else {
+      return <div>Click an outlined square above to place hotel</div>;
+    }
+  }
+
   renderChooseChainLabel(chain: Chain) {
-    return (
-      <StockLabel
-        key={`choose-${chain}`}
-        chain={chain}
-        onClick={() => this.props.moves.chooseNewChain(chain)}
-      ></StockLabel>
-    );
+    return <StockLabel key={`choose-${chain}`} chain={chain} onClick={() => this.props.moves.chooseNewChain(chain)} />;
   }
 
   renderChooseChain() {
@@ -148,7 +160,7 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
               },
             });
           }}
-        ></TextField>
+        />
       </div>
     );
   }
@@ -208,7 +220,7 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
       .filter((chainSize) => chainSize.size === biggestChainSize)
       .map((chainSize) => chainSize.chain)
       .map((chain) => (
-        <StockLabel key={`stock-${chain}`} chain={chain} onClick={() => this.props.moves[move](chain)}></StockLabel>
+        <StockLabel key={`stock-${chain}`} chain={chain} onClick={() => this.props.moves[move](chain)} />
       ));
     return (
       <div className={css.WrapRow}>
@@ -229,114 +241,80 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
     return this.renderBreakMergerTieChain('There is a tie. Choose the chain to merge next:', 'chooseChainToMerge');
   }
 
-  // TODO: refactor and simlify
+  renderSwapAndSellInput(label: string, onChange: (n: number) => void, value?: number) {
+    return (
+      <div className={css.SwapSellEntry}>
+        <div className={css.SwapSellLabel}>{label}</div>
+        <TextField
+          className={css.ActionInput}
+          placeholder="#"
+          value={value || ''}
+          onChange={(e) => onChange(this.safeParseNumber(e.target.value))}
+        />
+      </div>
+    );
+  }
+
   renderSwapAndSellStock() {
-    const numToSwap = this.state.stocksToSwap || 0;
-    const numToSell = this.state.stocksToSell || 0;
+    const { stocksToSwap, stocksToSell } = this.state;
+    const numToSwap = stocksToSwap || 0;
+    const numToSell = stocksToSell || 0;
+    const setSwap = (n: number) => this.setState({ stocksToSwap: n });
+    const setSell = (n: number) => this.setState({ stocksToSell: n });
+    const onClick = () => {
+      this.props.moves.swapAndSellStock(numToSwap, numToSell);
+      this.setState({ stocksToSwap: 0, stocksToSell: 0 });
+    };
+
     return (
       <div className={css.WrapRow}>
-        <div
-          className={css.MarginRight}
-        >{`Do you want to exchange any ${this.props.G.merger.chainToMerge} stock?`}</div>
-        <div className={css.SwapSellEntry}>
-          <div className={css.SwapSellLabel}>Swap</div>
-          <TextField
-            className={css.ActionInput}
-            placeholder="#"
-            value={this.state.stocksToSwap || ''}
-            onChange={(e) => {
-              let n = e.target.value === '' ? 0 : Number(e.target.value);
-              if (Number.isNaN(n)) {
-                n = 0;
-              }
-              this.setState({
-                stocksToSwap: n,
-              });
-            }}
-          ></TextField>
+        <div className={css.MarginRight}>
+          {`Do you want to exchange any ${this.props.G.merger.chainToMerge} stock?`}
         </div>
-        <div className={css.SwapSellEntry}>
-          <div className={css.SwapSellLabel}>Sell</div>
-          <TextField
-            className={css.ActionInput}
-            placeholder="#"
-            value={this.state.stocksToSell || ''}
-            onChange={(e) => {
-              let n = e.target.value === '' ? 0 : Number(e.target.value);
-              if (Number.isNaN(n)) {
-                n = 0;
-              }
-              this.setState({
-                stocksToSell: n,
-              });
-            }}
-          ></TextField>
-        </div>
-        <Button
-          className={css.ActionButton}
-          variant="contained"
-          color="primary"
-          onClick={() => {
-            this.props.moves.swapAndSellStock(numToSwap, numToSell);
-            this.setState({ stocksToSwap: 0, stocksToSell: 0 });
-          }}
-        >
+        {this.renderSwapAndSellInput('Swap', setSwap, stocksToSwap)}
+        {this.renderSwapAndSellInput('Sell', setSell, stocksToSell)}
+        <Button className={css.ActionButton} variant="contained" color="primary" onClick={onClick}>
           {numToSwap + numToSell > 0 ? 'OK' : 'Pass'}
         </Button>
       </div>
     );
   }
 
-  render() {
-    let content;
+  renderActions(): ReactNode | undefined {
     if (this.props.gameOverMessage) {
-      content = <div>{this.props.gameOverMessage}</div>;
+      return this.props.gameOverMessage;
     } else if (this.props.ctx.phase === 'buildingPhase') {
-      const stage = this.props.ctx.activePlayers[this.playerIndex()];
-      switch (stage) {
+      switch (this.props.ctx.activePlayers[this.playerIndex()]) {
         case 'placeHotelStage':
-          const hasPlayableHotel = !!playerHotels(this.props.G, this.playerID()).find(
-            (h) => !isUnplayable(this.props.G, h),
-          );
-          if (!hasPlayableHotel) {
-            content = this.renderButton('Continue (you have no playable hotels)', () => this.props.moves.placeHotel());
-          } else {
-            content = <div>Click an outlined square above to place hotel</div>;
-          }
-          break;
+          return this.renderPlaceHotel();
         case 'chooseNewChainStage':
-          content = this.renderChooseChain();
-          break;
+          return this.renderChooseChain();
         case 'buyStockStage':
-          content = this.renderBuyStock();
-          break;
+          return this.renderBuyStock();
         case 'declareGameOverStage':
-          content = this.renderGameOverChoice();
-          break;
+          return this.renderGameOverChoice();
         case 'drawHotelsStage':
-          content = this.renderButton('Draw hotels', () => this.props.moves.drawHotels());
-          break;
+          return this.renderButton('Draw hotels', () => this.props.moves.drawHotels());
         default:
           break;
       }
     } else if (this.props.ctx.currentPlayer === this.playerID()) {
       switch (this.props.ctx.phase) {
         case 'chooseSurvivingChainPhase':
-          content = this.renderChooseSurvivingChain();
-          break;
+          return this.renderChooseSurvivingChain();
         case 'chooseChainToMergePhase':
-          content = this.renderChooseChainToMerge();
-          break;
+          return this.renderChooseChainToMerge();
         case 'mergerPhase':
-          content = this.renderSwapAndSellStock();
-          break;
+          return this.renderSwapAndSellStock();
         default:
           break;
       }
     }
+  }
 
-    return (
-      <div className={`${css.Actions} ${css.WrapRow} ${content ? css.YourTurn : ''}`}>{content || 'Not your turn'}</div>
-    );
+  render() {
+    const actions = this.renderActions();
+    const yourTurnClass = actions ? css.YourTurn : '';
+    return <div className={`${css.Actions} ${css.WrapRow} ${yourTurnClass}`}>{actions || 'Not your turn'}</div>;
   }
 }

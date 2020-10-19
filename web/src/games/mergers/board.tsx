@@ -342,15 +342,14 @@ export class Board extends React.Component<BoardProps, BoardState> {
             activePlayers={this.props.ctx.activePlayers}
             playerID={this.props.playerID}
             onHotelClicked={this.props.moves.placeHotel}
-          ></HotelGrid>
+          />
           <PlayerActions
             G={this.props.G}
             ctx={this.props.ctx}
-            gameArgs={this.props.gameArgs}
             moves={this.props.moves}
             playerID={this.props.playerID}
             gameOverMessage={this.gameOverMessage()}
-          ></PlayerActions>
+          />
           {this.renderPlayerStatus()}
           {this.maybeRenderMergerDetails()}
           {this.maybeRenderGameOverDetails()}
