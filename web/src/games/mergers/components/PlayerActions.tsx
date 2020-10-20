@@ -1,18 +1,22 @@
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
-import { Ctx } from 'boardgame.io';
 import React, { ReactNode } from 'react';
-import { Chain, IG } from '../types';
+import { Chain, Hotel, Merger, Player } from '../types';
 import { fillStockMap, isUnplayable, playerHotels, priceOfStock, sizeOfChain } from '../utils';
 
 import { StockLabel } from './StockLabel';
 import css from './PlayerActions.css';
 
 interface PlayerActionsProps {
-  G: IG;
-  ctx: Ctx;
+  hotels?: Hotel[][];
+  players?: Record<string, Player>;
+  availableStocks?: Record<Chain, number>;
+  merger?: Merger;
+  playerStage?: string;
+  playerPhase?: string;
   moves: any;
   playerID: string;
+  playerIndex: number;
   gameOverMessage?: string;
 }
 
@@ -42,12 +46,8 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
     return this.props.playerID;
   }
 
-  playerIndex() {
-    return this.props.ctx.playOrder.indexOf(this.playerID());
-  }
-
   playerState() {
-    return this.props.G.players[this.playerID()];
+    return this.props.players[this.playerID()];
   }
 
   parseNumber(text: string): number {
@@ -86,12 +86,12 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
       if (Number.isNaN(numToBuy)) {
         return 'Please enter numbers only';
       }
-      const numAvailable = this.props.G.availableStocks[chain];
+      const numAvailable = this.props.availableStocks[chain];
       if (numToBuy > numAvailable) {
         return `There are only ${numAvailable} ${chain} available`;
       }
       totalCount += numToBuy;
-      totalPrice += numToBuy * priceOfStock(chain, this.props.G.hotels);
+      totalPrice += numToBuy * priceOfStock(chain, this.props.hotels);
     }
     if (totalCount > 3) {
       return 'You  may only buy up to 3 stocks per turn';
@@ -111,7 +111,9 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
   }
 
   renderPlaceHotel() {
-    const hasPlayableHotel = !!playerHotels(this.props.G, this.playerID()).find((h) => !isUnplayable(this.props.G, h));
+    const hasPlayableHotel = !!playerHotels(this.props.hotels, this.playerID()).find(
+      (h) => !isUnplayable(this.props.hotels, h),
+    );
     if (!hasPlayableHotel) {
       const label = 'Continue (you have no playable hotels)';
       return this.renderButton(label, this.props.moves.placeHotel);
@@ -126,7 +128,7 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
 
   renderChooseChain() {
     const chainLabels = Object.keys(Chain)
-      .filter((key) => sizeOfChain(Chain[key], this.props.G.hotels) === 0)
+      .filter((key) => sizeOfChain(Chain[key], this.props.hotels) === 0)
       .map((key) => this.renderChooseChainLabel(Chain[key]));
 
     return (
@@ -138,7 +140,8 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
   }
 
   renderStockToBuy(chain: Chain) {
-    const stockPrice = priceOfStock(chain, this.props.G.hotels);
+    debugger;
+    const stockPrice = priceOfStock(chain, this.props.hotels);
     if (stockPrice === undefined) {
       return;
     }
@@ -211,9 +214,9 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
   }
 
   renderBreakMergerTieChain(message: string, move: string) {
-    const chainSizes = this.props.G.merger.mergingChains.map((c) => ({
+    const chainSizes = this.props.merger.mergingChains.map((c) => ({
       chain: c,
-      size: sizeOfChain(c, this.props.G.hotels),
+      size: sizeOfChain(c, this.props.hotels),
     }));
     const biggestChainSize = chainSizes[0].size;
     const choices = chainSizes
@@ -268,9 +271,7 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
 
     return (
       <div className={css.WrapRow}>
-        <div className={css.MarginRight}>
-          {`Do you want to exchange any ${this.props.G.merger.chainToMerge} stock?`}
-        </div>
+        <div className={css.MarginRight}>{`Do you want to exchange any ${this.props.merger.chainToMerge} stock?`}</div>
         {this.renderSwapAndSellInput('Swap', setSwap, stocksToSwap)}
         {this.renderSwapAndSellInput('Sell', setSell, stocksToSell)}
         <Button className={css.ActionButton} variant="contained" color="primary" onClick={onClick}>
@@ -280,35 +281,39 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
     );
   }
 
+  renderBuildingPhase(): ReactNode | undefined {
+    switch (this.props.playerStage) {
+      case 'placeHotelStage':
+        return this.renderPlaceHotel();
+      case 'chooseNewChainStage':
+        return this.renderChooseChain();
+      case 'buyStockStage':
+        return this.renderBuyStock();
+      case 'declareGameOverStage':
+        return this.renderGameOverChoice();
+      case 'drawHotelsStage':
+        return this.renderButton('Draw hotels', () => this.props.moves.drawHotels());
+      default:
+        break;
+    }
+  }
+
   renderActions(): ReactNode | undefined {
     if (this.props.gameOverMessage) {
       return this.props.gameOverMessage;
-    } else if (this.props.ctx.phase === 'buildingPhase') {
-      switch (this.props.ctx.activePlayers[this.playerIndex()]) {
-        case 'placeHotelStage':
-          return this.renderPlaceHotel();
-        case 'chooseNewChainStage':
-          return this.renderChooseChain();
-        case 'buyStockStage':
-          return this.renderBuyStock();
-        case 'declareGameOverStage':
-          return this.renderGameOverChoice();
-        case 'drawHotelsStage':
-          return this.renderButton('Draw hotels', () => this.props.moves.drawHotels());
-        default:
-          break;
-      }
-    } else if (this.props.ctx.currentPlayer === this.playerID()) {
-      switch (this.props.ctx.phase) {
-        case 'chooseSurvivingChainPhase':
-          return this.renderChooseSurvivingChain();
-        case 'chooseChainToMergePhase':
-          return this.renderChooseChainToMerge();
-        case 'mergerPhase':
-          return this.renderSwapAndSellStock();
-        default:
-          break;
-      }
+    }
+
+    switch (this.props.playerPhase) {
+      case 'buildingPhase':
+        return this.renderBuildingPhase();
+      case 'chooseSurvivingChainPhase':
+        return this.renderChooseSurvivingChain();
+      case 'chooseChainToMergePhase':
+        return this.renderChooseChainToMerge();
+      case 'mergerPhase':
+        return this.renderSwapAndSellStock();
+      default:
+        break;
     }
   }
 

@@ -72,6 +72,14 @@ export class Board extends React.Component<BoardProps, BoardState> {
     return this.props.gameArgs.players[this.playerID()];
   }
 
+  playerPhase() {
+    return this.props.ctx.currentPlayer === this.playerID() && this.props.ctx.phase;
+  }
+
+  playerStage() {
+    return this.props.ctx.activePlayers && this.props.ctx.activePlayers[this.playerIndex()];
+  }
+
   winnerMessage() {
     const { winner, winners } = this.props.ctx.gameover;
     if (winner) {
@@ -115,8 +123,9 @@ export class Board extends React.Component<BoardProps, BoardState> {
               turnClass = css.CurrentTurn;
             }
           }
+          const elementId = `player-label-${player.playerID}`;
           return (
-            <div key={player.playerID} className={`${css.Player} ${turnClass}`}>
+            <div id={elementId} key={elementId} className={`${css.Player} ${turnClass}`}>
               {player.name}
             </div>
           );
@@ -338,16 +347,20 @@ export class Board extends React.Component<BoardProps, BoardState> {
           <HotelGrid
             hotels={this.props.G.hotels}
             lastPlacedHotel={this.props.G.lastPlacedHotel}
-            playOrder={this.props.ctx.playOrder}
-            activePlayers={this.props.ctx.activePlayers}
+            isPlacingHotel={this.playerStage() === 'placeHotelStage'}
             playerID={this.props.playerID}
             onHotelClicked={this.props.moves.placeHotel}
           />
           <PlayerActions
-            G={this.props.G}
-            ctx={this.props.ctx}
+            hotels={this.props.G.hotels}
+            players={this.props.G.players}
+            availableStocks={this.props.G.availableStocks}
+            merger={this.props.G.merger}
             moves={this.props.moves}
             playerID={this.props.playerID}
+            playerIndex={this.playerIndex()}
+            playerPhase={this.playerPhase()}
+            playerStage={this.playerStage()}
             gameOverMessage={this.gameOverMessage()}
           />
           {this.renderPlayerStatus()}

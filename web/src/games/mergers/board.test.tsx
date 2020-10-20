@@ -5,11 +5,8 @@ import { State } from 'boardgame.io';
 import { Client } from 'boardgame.io/client';
 import { GameMode } from 'gamesShared/definitions/mode';
 import { MergersGame } from './game';
-import { Chain, IG } from './types';
-import * as utils from './utils';
 
 import { Board } from './board';
-import actionsCss from './PlayerActions.css';
 
 Enzyme.configure({ adapter: new Adapter() });
 
@@ -31,7 +28,7 @@ describe('#renderBuyStock', () => {
     />
   );
 
-  const setUpComponent = (phase: string, stage: string, setUpStateFn: (state: State) => void) => {
+  const setUpComponent = (phase?: string, stage?: string, setUpStateFn?: (state: State) => void) => {
     const client = Client({
       game: MergersGame,
       numPlayers: 3,
@@ -40,181 +37,30 @@ describe('#renderBuyStock', () => {
     client.moves.buyStock = jest.fn();
 
     const state0 = client.store.getState();
-    const state1 = {
-      ...state0,
-      ctx: {
-        ...state0.ctx,
-        phase,
-        activePlayers: { '0': stage },
-      },
-    };
 
-    setUpStateFn(state1);
+    if (phase) {
+      state0.ctx.phase = phase;
+    }
+    if (stage) {
+      state0.ctx.activePlayers = { '0': stage };
+    }
+    if (setUpStateFn) {
+      setUpStateFn(state0);
+    }
 
-    return Enzyme.mount(<TestBoard G={state1.G} ctx={state1.ctx} moves={client.moves} playerID="0" />);
+    return Enzyme.mount(<TestBoard G={state0.G} ctx={state0.ctx} moves={client.moves} playerID="0" />);
   };
 
-  const setUpHotel = (G: IG, id: string, chain?: Chain) => {
-    utils.getHotel(G, id).hasBeenPlaced = true;
-    utils.getHotel(G, id).chain = chain;
-  };
+  // TODO: add more tests
+  describe('#Board', () => {
+    describe('on game start', () => {
+      const comp = setUpComponent();
 
-  describe('trying to buy zero stocks, even with no money', () => {
-    const comp = setUpComponent('buildingPhase', 'buyStockStage', (state: State) => {
-      setUpHotel(state.G, '1-A', Chain.Tower);
-      setUpHotel(state.G, '2-A', Chain.Tower);
-      setUpHotel(state.G, '3-B', Chain.Luxor);
-      setUpHotel(state.G, '4-B', Chain.Luxor);
-
-      // player doesn't have any money
-      state.G.players['0'].money = 0;
-    });
-
-    comp.find(`.${actionsCss.ActionButton}`).at(0).simulate('click');
-
-    it('submits an empty order', () => {
-      expect(comp.props().moves.buyStock).toHaveBeenCalledWith(utils.fillStockMap(0));
-      expect(comp.find(`.${actionsCss.ActionButton}`).at(0).props().disabled).toBeFalse();
-    });
-  });
-
-  describe('trying to buy 3 stocks with exactly the right amount of money left', () => {
-    const comp = setUpComponent('buildingPhase', 'buyStockStage', (state: State) => {
-      // hotels are all from the cheapest tier and of size 2 = $200 per stock
-      setUpHotel(state.G, '1-A', Chain.Tower);
-      setUpHotel(state.G, '2-A', Chain.Tower);
-      setUpHotel(state.G, '3-B', Chain.Luxor);
-      setUpHotel(state.G, '4-B', Chain.Luxor);
-
-      // player has exactly the right amount of money
-      state.G.players['0'].money = 600;
-    });
-
-    // player buys 3 stock
-    comp
-      .find('input[name="stock-to-buy-input-Tower"]')
-      .at(0)
-      .simulate('change', { target: { name: 'stock-to-buy-input-Tower', value: '2' } });
-    comp
-      .find('input[name="stock-to-buy-input-Luxor"]')
-      .at(0)
-      .simulate('change', { target: { name: 'stock-to-buy-input-Luxor', value: '1' } });
-
-    comp.find(`.${actionsCss.ActionButton}`).at(0).simulate('click');
-
-    it('submits the correct order', () => {
-      expect(comp.props().moves.buyStock).toHaveBeenCalledWith({
-        ...utils.fillStockMap(0),
-        [Chain.Tower]: 2,
-        [Chain.Luxor]: 1,
+      it('renders all players', () => {
+        expect(comp.find('#player-label-0').at(0).text()).toContain('player0');
+        expect(comp.find('#player-label-1').at(0).text()).toContain('player1');
+        expect(comp.find('#player-label-2').at(0).text()).toContain('player2');
       });
-      expect(comp.find(`.${actionsCss.ActionButton}`).at(0).props().disabled).toBeFalse();
-    });
-  });
-
-  describe('trying to buy stock with not enough money left', () => {
-    const comp = setUpComponent('buildingPhase', 'buyStockStage', (state: State) => {
-      // hotels are all from the cheapest tier and of size 2 = $200 per stock
-      setUpHotel(state.G, '1-A', Chain.Tower);
-      setUpHotel(state.G, '2-A', Chain.Tower);
-      setUpHotel(state.G, '3-B', Chain.Luxor);
-      setUpHotel(state.G, '4-B', Chain.Luxor);
-
-      // player is short $100
-      state.G.players['0'].money = 500;
-    });
-
-    // player buys 3 stock
-    comp
-      .find('input[name="stock-to-buy-input-Tower"]')
-      .at(0)
-      .simulate('change', { target: { name: 'stock-to-buy-input-Tower', value: '2' } });
-    comp
-      .find('input[name="stock-to-buy-input-Luxor"]')
-      .at(0)
-      .simulate('change', { target: { name: 'stock-to-buy-input-Luxor', value: '1' } });
-
-    comp.find(`.${actionsCss.ActionButton}`).at(0).simulate('click');
-
-    it('disables the Buy button', () => {
-      expect(comp.props().moves.buyStock).not.toHaveBeenCalled();
-      expect(comp.find(`.${actionsCss.ActionButton}`).at(0).props().disabled).toBeTrue();
-    });
-  });
-
-  describe('trying to buy more of a stock than is available', () => {
-    const comp = setUpComponent('buildingPhase', 'buyStockStage', (state: State) => {
-      setUpHotel(state.G, '1-A', Chain.Tower);
-      setUpHotel(state.G, '2-A', Chain.Tower);
-      setUpHotel(state.G, '3-B', Chain.Luxor);
-      setUpHotel(state.G, '4-B', Chain.Luxor);
-      state.G.players['0'].money = 1000;
-
-      // there is only 1 Tower left
-      state.G.availableStocks[Chain.Tower] = 1;
-    });
-
-    // player tries to buy 2 Tower
-    comp
-      .find('input[name="stock-to-buy-input-Tower"]')
-      .at(0)
-      .simulate('change', { target: { name: 'stock-to-buy-input-Tower', value: '2' } });
-
-    comp.find(`.${actionsCss.ActionButton}`).at(0).simulate('click');
-
-    it('disables the Buy button', () => {
-      expect(comp.props().moves.buyStock).not.toHaveBeenCalled();
-      expect(comp.find(`.${actionsCss.ActionButton}`).at(0).props().disabled).toBeTrue();
-    });
-  });
-
-  describe('trying to buy more than 3 stocks', () => {
-    const comp = setUpComponent('buildingPhase', 'buyStockStage', (state: State) => {
-      setUpHotel(state.G, '1-A', Chain.Tower);
-      setUpHotel(state.G, '2-A', Chain.Tower);
-      setUpHotel(state.G, '3-B', Chain.Luxor);
-      setUpHotel(state.G, '4-B', Chain.Luxor);
-      state.G.players['0'].money = 1000;
-    });
-
-    // player tries to buy 4 stocks
-    comp
-      .find('input[name="stock-to-buy-input-Tower"]')
-      .at(0)
-      .simulate('change', { target: { name: 'stock-to-buy-input-Tower', value: '2' } });
-    comp
-      .find('input[name="stock-to-buy-input-Luxor"]')
-      .at(0)
-      .simulate('change', { target: { name: 'stock-to-buy-input-Luxor', value: '2' } });
-
-    comp.find(`.${actionsCss.ActionButton}`).at(0).simulate('click');
-
-    it('disables the Buy button', () => {
-      expect(comp.props().moves.buyStock).not.toHaveBeenCalled();
-      expect(comp.find(`.${actionsCss.ActionButton}`).at(0).props().disabled).toBeTrue();
-    });
-  });
-
-  describe('entering a value that is not a number', () => {
-    const comp = setUpComponent('buildingPhase', 'buyStockStage', (state: State) => {
-      setUpHotel(state.G, '1-A', Chain.Tower);
-      setUpHotel(state.G, '2-A', Chain.Tower);
-      setUpHotel(state.G, '3-B', Chain.Luxor);
-      setUpHotel(state.G, '4-B', Chain.Luxor);
-      state.G.players['0'].money = 1000;
-    });
-
-    // player enters a non-numerical value
-    comp
-      .find('input[name="stock-to-buy-input-Tower"]')
-      .at(0)
-      .simulate('change', { target: { name: 'stock-to-buy-input-Tower', value: 'oops' } });
-
-    comp.find(`.${actionsCss.ActionButton}`).at(0).simulate('click');
-
-    it('disables the Buy button', () => {
-      expect(comp.props().moves.buyStock).not.toHaveBeenCalled();
-      expect(comp.find(`.${actionsCss.ActionButton}`).at(0).props().disabled).toBeTrue();
     });
   });
 });

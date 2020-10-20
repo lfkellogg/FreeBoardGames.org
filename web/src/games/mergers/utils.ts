@@ -66,17 +66,17 @@ export function getRow(hotel: Hotel | string): number {
 
 export function getColumn(hotel: Hotel | string): number {
   const id: string = isHotel(hotel) ? hotel.id : hotel;
-  return parseInt(id.split('-')[0], 10) - 1; // -1 because columns are 0-based
+  return Number(id.split('-')[0]) - 1; // -1 because columns are 0-based
 }
 
-export function getHotel(G: IG, id: string): Hotel {
-  return G.hotels[getRow(id)][getColumn(id)];
+export function getHotel(hotels: Hotel[][], id: string): Hotel {
+  return hotels[getRow(id)][getColumn(id)];
 }
 
-export function adjacentHotels(G: IG, hotel: Hotel): Hotel[] {
+export function adjacentHotels(hotels: Hotel[][], hotel: Hotel): Hotel[] {
   const r = getRow(hotel);
   const c = getColumn(hotel);
-  return G.hotels
+  return hotels
     .flat()
     .filter((h) => h.hasBeenPlaced)
     .filter(
@@ -85,8 +85,8 @@ export function adjacentHotels(G: IG, hotel: Hotel): Hotel[] {
     );
 }
 
-export function playerHotels(G: IG, playerID: string) {
-  return G.hotels.flat().filter((h) => h.drawnByPlayer === playerID && !h.hasBeenPlaced && !h.hasBeenRemoved);
+export function playerHotels(hotels: Hotel[][], playerID: string) {
+  return hotels.flat().filter((h) => h.drawnByPlayer === playerID && !h.hasBeenPlaced && !h.hasBeenRemoved);
 }
 
 export function sizeOfChain(chain: Chain, hotels: Hotel[][]): number {
@@ -126,37 +126,37 @@ export function priceOfStockBySize(chain: Chain, size: number): number | undefin
   }
 }
 
-export function playersInDescOrderOfStock(G: IG, chain: Chain): Player[] {
-  const players = Object.values(G.players);
-  players.sort((a, b) => b.stocks[chain] - a.stocks[chain]);
-  return players;
+export function playersInDescOrderOfStock(players: Record<string, Player>, chain: Chain): Player[] {
+  const playerList = Object.values(players);
+  playerList.sort((a, b) => b.stocks[chain] - a.stocks[chain]);
+  return playerList;
 }
 
-export function playersInMajority(G: IG, chain: Chain): Player[] {
-  const players = playersInDescOrderOfStock(G, chain);
-  const majorityStockCount = players[0].stocks[chain];
+export function playersInMajority(players: Record<string, Player>, chain: Chain): Player[] {
+  const sortedPlayers = playersInDescOrderOfStock(players, chain);
+  const majorityStockCount = sortedPlayers[0].stocks[chain];
   if (majorityStockCount === 0) {
     return [];
   }
-  return players.filter((p) => p.stocks[chain] === majorityStockCount);
+  return sortedPlayers.filter((p) => p.stocks[chain] === majorityStockCount);
 }
 
-export function playersInMinority(G: IG, chain: Chain): Player[] {
-  const players = playersInDescOrderOfStock(G, chain);
-  const majorityStockCount = players[0].stocks[chain];
-  const minorityStockCount = players[1].stocks[chain];
+export function playersInMinority(players: Record<string, Player>, chain: Chain): Player[] {
+  const sortedPlayers = playersInDescOrderOfStock(players, chain);
+  const majorityStockCount = sortedPlayers[0].stocks[chain];
+  const minorityStockCount = sortedPlayers[1].stocks[chain];
   if (majorityStockCount === minorityStockCount || !minorityStockCount) {
     return [];
   }
-  return players.filter((p) => p.stocks[chain] === minorityStockCount);
+  return sortedPlayers.filter((p) => p.stocks[chain] === minorityStockCount);
 }
 
-export function majorityBonus(G: IG, chain: Chain): number {
-  return priceOfStock(chain, G.hotels) * 10;
+export function majorityBonus(hotels: Hotel[][], chain: Chain): number {
+  return priceOfStock(chain, hotels) * 10;
 }
 
-export function minorityBonus(G: IG, chain: Chain): number {
-  return priceOfStock(chain, G.hotels) * 5;
+export function minorityBonus(hotels: Hotel[][], chain: Chain): number {
+  return priceOfStock(chain, hotels) * 5;
 }
 
 export function roundUpToNearest100(x: number): number {
@@ -167,32 +167,32 @@ export function roundDownToNearest2(x: number): number {
   return Math.floor(x / 2) * 2;
 }
 
-export function isUnplayable(G: IG, hotel: Hotel) {
+export function isUnplayable(hotels: Hotel[][], hotel: Hotel) {
   if (hotel.hasBeenPlaced) {
     return false;
   }
 
-  return isPermanentlyUnplayable(G, hotel) || isTemporarilyUnplayable(G, hotel);
+  return isPermanentlyUnplayable(hotels, hotel) || isTemporarilyUnplayable(hotels, hotel);
 }
 
 // a hotel is unplayable if it would merge two unmergeable chains
-export function isPermanentlyUnplayable(G: IG, hotel: Hotel, maxMergeableSize: number = 10) {
+export function isPermanentlyUnplayable(hotels: Hotel[][], hotel: Hotel, maxMergeableSize: number = 10) {
   const adjacentChains = new Set(
-    adjacentHotels(G, hotel)
+    adjacentHotels(hotels, hotel)
       .map((h) => h.chain)
       .filter((c) => !!c),
   );
-  const unmergeableChains = Array.from(adjacentChains).filter((c) => sizeOfChain(c, G.hotels) > maxMergeableSize);
+  const unmergeableChains = Array.from(adjacentChains).filter((c) => sizeOfChain(c, hotels) > maxMergeableSize);
   return unmergeableChains.length > 1;
 }
 
 // a hotel is unplayable if it would form a new chain, but they are all on the board
-export function isTemporarilyUnplayable(G: IG, hotel: Hotel) {
+export function isTemporarilyUnplayable(hotels: Hotel[][], hotel: Hotel) {
   const chainsOnBoard: Chain[] = Object.keys(Chain)
     .map((key) => Chain[key])
-    .filter((chain) => !!G.hotels.flat().find((h) => h.chain === chain));
+    .filter((chain) => !!hotels.flat().find((h) => h.chain === chain));
   if (chainsOnBoard.length === 7) {
-    const adjacent = adjacentHotels(G, hotel);
+    const adjacent = adjacentHotels(hotels, hotel);
     return adjacent.length > 0 && adjacent.filter((h) => !!h.chain).length === 0;
   }
   return false;

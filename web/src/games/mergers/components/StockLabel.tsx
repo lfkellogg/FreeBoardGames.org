@@ -22,9 +22,11 @@ export class StockLabel extends React.Component<StockLabelProps, {}> {
   }
 
   render() {
+    const { chain, onClick } = this.props;
+    const firstLetter = chain[0];
     return (
-      <div key={`stock-label-${this.props.chain}`} className={this.className()} onClick={this.props.onClick}>
-        {this.props.chain[0]}
+      <div key={`stock-label-${chain}`} className={this.className()} onClick={onClick}>
+        {firstLetter}
       </div>
     );
   }

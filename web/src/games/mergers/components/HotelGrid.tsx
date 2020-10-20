@@ -8,8 +8,7 @@ import css from './HotelGrid.css';
 interface HotelGridProps {
   hotels: Hotel[][];
   lastPlacedHotel?: string;
-  playOrder: string[];
-  activePlayers: {};
+  isPlacingHotel: boolean;
   playerID: string;
   onHotelClicked: (id: string) => void;
 }
@@ -38,9 +37,7 @@ export class HotelGrid extends React.Component<HotelGridProps, HotelGridState> {
 
   renderHotel(chainTiles: {}, hotel: Hotel) {
     const isHovered = this.state.hoveredHotel === hotel.id;
-    const playerIndex = this.props.playOrder.indexOf(this.props.playerID);
-    const placingHotel = this.props.activePlayers && this.props.activePlayers[playerIndex] === 'placeHotelStage';
-    const hoverClass = placingHotel && isHovered ? css.Hover : '';
+    const hoverClass = this.props.isPlacingHotel && isHovered ? css.Hover : '';
     const isLastPlaced = this.props.lastPlacedHotel === hotel.id;
     const lastPlacedLabel = isLastPlaced ? <StarIcon></StarIcon> : '';
     const removedLabel = hotel.hasBeenRemoved ? <ClearIcon></ClearIcon> : '';
