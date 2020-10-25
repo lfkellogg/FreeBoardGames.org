@@ -140,7 +140,6 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
   }
 
   renderStockToBuy(chain: Chain) {
-    debugger;
     const stockPrice = priceOfStock(chain, this.props.hotels);
     if (stockPrice === undefined) {
       return;
@@ -226,7 +225,7 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
         <StockLabel key={`stock-${chain}`} chain={chain} onClick={() => this.props.moves[move](chain)} />
       ));
     return (
-      <div className={css.WrapRow}>
+      <div id="break-merger-tie" className={css.WrapRow}>
         <div className={css.MarginRight}>{message}</div>
         {choices}
       </div>

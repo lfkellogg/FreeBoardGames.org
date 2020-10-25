@@ -210,6 +210,7 @@ export function chooseChainToMerge(G: IG, ctx, chain: Chain) {
   }
 
   G.merger.chainToMerge = chain;
+  G.merger.chainSize = sizeOfChain(chain, G.hotels);
 
   // move the chain to the front of the array
   G.merger.mergingChains.splice(G.merger.mergingChains.indexOf(chain), 1);
@@ -392,12 +393,14 @@ export function autosetChainToMerge(G: IG) {
   }
   if (G.merger.mergingChains.length === 1) {
     G.merger.chainToMerge = G.merger.mergingChains[0];
+    G.merger.chainSize = sizeOfChain(G.merger.chainToMerge, G.hotels);
     return;
   }
   const firstChainSize = sizeOfChain(G.merger.mergingChains[0], G.hotels);
   const secondChainSize = sizeOfChain(G.merger.mergingChains[1], G.hotels);
   if (firstChainSize !== secondChainSize) {
     G.merger.chainToMerge = G.merger.mergingChains[0];
+    G.merger.chainSize = sizeOfChain(G.merger.chainToMerge, G.hotels);
   }
 }
 
@@ -593,6 +596,7 @@ export const MergersGame: Game<IG> = {
       onEnd: (G: IG) => {
         // remove the just-merged chain
         G.merger.chainToMerge = undefined;
+        G.merger.chainSize = undefined;
         G.merger.mergingChains.shift();
 
         // if we're all done, absorb all hotels into the surviving chain and clear the merer

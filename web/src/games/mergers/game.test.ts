@@ -24,6 +24,7 @@ function setupTestHotels(): Hotel[][] {
   ];
 }
 
+// TODO: clean this up to use more of the normal game setup
 function getScenario(hotels?: Hotel[][]) {
   const MergersCustomScenario = {
     ...MergersGame,
@@ -679,7 +680,6 @@ describe('mergerPhase', () => {
       expect(p0.store.getState().G.players['1'].money).toEqual(8000);
       // p0 swaps and sells stock
 
-      debugger;
       p0.moves.swapAndSellStock(2, 0); // swap 2, sell 0
       expect(p0.store.getState().G.players['0'].stocks[Chain.Continental]).toEqual(0);
       expect(p0.store.getState().G.players['0'].stocks[Chain.American]).toEqual(1);

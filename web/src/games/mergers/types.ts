@@ -47,6 +47,7 @@ export interface Merger {
   survivingChain?: Chain;
   chainToMerge?: Chain;
   mergingChains?: Chain[];
+  chainSize?: number;
   stockCounts?: Record<string, number>;
   bonuses?: Record<string, number>;
   swapAndSells?: Record<string, SwapAndSell>;

@@ -24,8 +24,9 @@ export class StockLabel extends React.Component<StockLabelProps, {}> {
   render() {
     const { chain, onClick } = this.props;
     const firstLetter = chain[0];
+    const elementId = `stock-label-${chain}`;
     return (
-      <div key={`stock-label-${chain}`} className={this.className()} onClick={onClick}>
+      <div id={elementId} key={elementId} className={this.className()} onClick={onClick}>
         {firstLetter}
       </div>
     );

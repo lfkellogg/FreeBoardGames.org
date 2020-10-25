@@ -13,11 +13,13 @@ import css from './Board.css';
 import { HotelGrid } from './components/HotelGrid';
 import { StockLabel } from './components/StockLabel';
 import { StockGuide } from './components/StockGuide';
-import { Chain, IG, Merger, Score } from './types';
+import { Chain, IG, Merger, Player, Score } from './types';
 import { priceOfStockBySize, sizeOfChain } from './utils';
 import { PlayerActions } from './components/PlayerActions';
+import { MergerDetails } from './components/MergerDetails';
+import { MergersDialog } from './components/MergersDialog';
 
-interface BoardProps {
+export interface BoardProps {
   G: IG;
   ctx: Ctx;
   moves: any;
@@ -25,20 +27,25 @@ interface BoardProps {
   gameArgs?: IGameArgs;
 }
 
-interface BoardState {
+export interface BoardState {
   mergerDetailsDismissed: boolean;
   gameOverDetailsDismissed: boolean;
   showPriceCard: boolean;
 }
 
-// TODO:
-//  - refactor out utils methods to only require specific input from G, ctx
+// TODOs
+// Must do:
+//  - add instructions & image
+//  - more test coverage of main board
+//  - generate coverage report
+//
+// Nice to have:
+//  - test what happens around unplayable tiles (e.g. if all tiles are unplayable)
+//  - test drawHotels()
 //  - animations
 //  - sounds
 //  - fix layout on small screens
 //  - add validation to swap/sell stock
-//  - test what happens around unplayable tiles (e.g. if all tiles are unplayable)
-//  - test drawHotels()
 export class Board extends React.Component<BoardProps, BoardState> {
   constructor(props) {
     super(props);
@@ -56,36 +63,39 @@ export class Board extends React.Component<BoardProps, BoardState> {
     }
   }
 
-  playerID() {
+  playerID(): string {
     return this.props.playerID;
   }
 
-  playerIndex() {
-    return this.props.ctx.playOrder.indexOf(this.playerID());
+  playerIndex(id: string = this.playerID()): number {
+    return this.props.ctx.playOrder.indexOf(id);
   }
 
-  playerState() {
-    return this.props.G.players[this.playerID()];
+  playerState(id: string = this.playerID()): Player {
+    return this.props.G.players[id];
   }
 
-  playerMetadata() {
-    return this.props.gameArgs.players[this.playerID()];
+  playerName(id: string = this.playerID()): string {
+    if (!this.props.gameArgs) {
+      return `Player ${id}`;
+    }
+    return this.props.gameArgs.players[this.playerIndex(id)].name;
   }
 
-  playerPhase() {
+  playerPhase(): string {
     return this.props.ctx.currentPlayer === this.playerID() && this.props.ctx.phase;
   }
 
-  playerStage() {
+  playerStage(): string {
     return this.props.ctx.activePlayers && this.props.ctx.activePlayers[this.playerIndex()];
   }
 
-  winnerMessage() {
+  winnerMessage(): string {
     const { winner, winners } = this.props.ctx.gameover;
     if (winner) {
-      return `${this.props.gameArgs.players[winner].name} wins!`;
+      return `${this.playerName(winner)} wins!`;
     } else {
-      return `${winners.map((id) => this.props.gameArgs.players[id].name).join(' & ')} tied!`;
+      return `${winners.map((id) => this.playerName(id)).join(' & ')} tied!`;
     }
   }
 
@@ -95,8 +105,7 @@ export class Board extends React.Component<BoardProps, BoardState> {
     }
 
     const { scores } = this.props.ctx.gameover;
-    const { players } = this.props.gameArgs;
-    const scoresMessage = scores.map((s) => `${players[s.id].name}: $${s.money}`).join(', ');
+    const scoresMessage = scores.map((s) => `${this.playerName(s.id)}: $${s.money}`).join(', ');
     return `${this.winnerMessage()} Scores: ${scoresMessage}`;
   }
 
@@ -111,6 +120,10 @@ export class Board extends React.Component<BoardProps, BoardState> {
   }
 
   renderPlayers() {
+    if (!this.props.gameArgs) {
+      return null;
+    }
+
     return (
       <div className={css.WrapRow}>
         <div className={css.MarginRight}>Current turn:</div>
@@ -143,8 +156,9 @@ export class Board extends React.Component<BoardProps, BoardState> {
     const stockPrice = priceOfStockBySize(chain, size);
     const stockPriceMessage = stockPrice === undefined ? '--' : `$${stockPrice}`;
     const hotelSizeMessage = stockPrice === undefined ? '' : ` (${size})`;
+    const elementId = `available-stock-${chain}`;
     return (
-      <div key={`available-stock-${chain}`} className={css.AvailableStockAndPrice}>
+      <div id={elementId} key={elementId} className={css.AvailableStockAndPrice}>
         {this.renderStock(chain, this.props.G.availableStocks[chain])}
         {stockPriceMessage}
         {hotelSizeMessage}
@@ -164,7 +178,7 @@ export class Board extends React.Component<BoardProps, BoardState> {
   renderPlayerStatus() {
     const player = this.playerState();
     return (
-      <div className={css.WrapRow}>
+      <div id="player-status" className={css.WrapRow}>
         <div className={css.MarginRight}>You have:</div>
         <span className={css.PlayerMoney}>${player.money}</span>
         {Object.keys(Chain).map((key) => this.renderStock(Chain[key], player.stocks[Chain[key]], true))}
@@ -175,81 +189,41 @@ export class Board extends React.Component<BoardProps, BoardState> {
   renderLastMove() {
     let message: string;
     message = this.props.G.lastMove;
-    for (const p of this.props.gameArgs.players) {
+    for (const p of this.props.gameArgs?.players || []) {
       message = message.replace(new RegExp(`Player ${p.playerID}`, 'g'), p.name);
     }
     return (
-      <div className={css.WrapRow}>
+      <div id="last-move" className={css.WrapRow}>
         <div className={css.MarginRight}>Last move:</div>
         <div>{message}</div>
       </div>
     );
   }
 
-  renderMergerDetails(merger: Merger) {
-    const { bonuses, chainToMerge, stockCounts } = merger;
-    const chainSize = sizeOfChain(chainToMerge, this.props.G.hotels);
-
-    const renderStockCount = (player) => {
-      const name = this.props.gameArgs.players[player.id].name;
-      return (
-        <p className={css.MarginLeft} key={`count-${chainToMerge}-${player.id}`}>
-          {name} has {stockCounts[player.id]}
-        </p>
-      );
-    };
-
-    const renderBonus = (playerID) => {
-      const name = this.props.gameArgs.players[playerID].name;
-      const bonus = bonuses[playerID];
-      return (
-        <p className={css.MarginLeft} key={`bonus-${chainToMerge}-${playerID}`}>
-          {name} gets ${bonus}
-        </p>
-      );
-    };
-
-    return (
-      <Typography component="div" variant="body1" className={css.MarginBottom} key={`merger-${chainToMerge}`}>
-        <p>The following players have {chainToMerge} stock:</p>
-        {Object.values(this.props.G.players)
-          .filter((p) => !!stockCounts[p.id])
-          .sort((a, b) => stockCounts[b.id] - stockCounts[a.id])
-          .map(renderStockCount)}
-        <p>With {chainSize} hotels, the bonuses are:</p>
-        {Object.keys(bonuses)
-          .sort((a, b) => bonuses[b] - bonuses[a])
-          .map(renderBonus)}
-      </Typography>
-    );
+  onCloseMergerDetails() {
+    this.setState({ mergerDetailsDismissed: true });
   }
 
   maybeRenderMergerDetails() {
-    if (this.props.ctx.phase !== 'mergerPhase') {
+    if (this.props.ctx.phase !== 'mergerPhase' || this.state.mergerDetailsDismissed) {
       return;
     }
 
     const { chainToMerge, survivingChain } = this.props.G.merger;
 
-    const onClose = () => this.setState({ mergerDetailsDismissed: true });
-
     return (
-      <Dialog
-        className={css.Mergers}
-        onClose={onClose}
-        aria-labelledby="merger-dialog-title"
-        open={!this.state.mergerDetailsDismissed}
+      <MergersDialog
+        dialogId="merger-details-dialog"
+        title={`${chainToMerge} is merging into ${survivingChain}!`}
+        onClose={() => this.onCloseMergerDetails()}
+        closeButtonText="OK"
       >
-        <DialogTitle id="merger-dialog-title">
-          {chainToMerge} is merging into {survivingChain}!
-        </DialogTitle>
-        <DialogContent>{this.renderMergerDetails(this.props.G.merger)}</DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} color="primary" autoFocus>
-            OK
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <MergerDetails
+          merger={this.props.G.merger}
+          playOrder={this.props.ctx.playOrder}
+          playerIdToNameFn={(id: string) => this.playerName(id)}
+        />
+      </MergersDialog>
     );
   }
 
@@ -278,10 +252,9 @@ export class Board extends React.Component<BoardProps, BoardState> {
 
   renderFinalScores() {
     const { scores } = this.props.ctx.gameover;
-    const { players } = this.props.gameArgs;
     const renderScore = (score: Score) => (
       <p key={`score-${score.id}`}>
-        {players[score.id].name}: ${score.money}
+        {this.playerName(score.id)}: ${score.money}
       </p>
     );
     return (
@@ -295,10 +268,21 @@ export class Board extends React.Component<BoardProps, BoardState> {
   }
 
   renderFinalPayouts(finalMergers: Merger[]) {
+    const mergerDetails = finalMergers.map((merger) => {
+      return (
+        <MergerDetails
+          key={`final-merger-details-${merger.chainToMerge}`}
+          merger={merger}
+          playOrder={this.props.ctx.playOrder}
+          playerIdToNameFn={(id) => this.playerName(id)}
+        />
+      );
+    });
+
     return (
       <div className={css.MarginTopBottom}>
         <Typography variant="h6">Final payouts</Typography>
-        {finalMergers.map((merger) => this.renderMergerDetails(merger))}
+        {mergerDetails}
       </div>
     );
   }
@@ -311,7 +295,6 @@ export class Board extends React.Component<BoardProps, BoardState> {
     const onClose = () => this.setState({ gameOverDetailsDismissed: true });
 
     const { declaredBy, finalMergers } = this.props.ctx.gameover;
-    const declaredByName = this.props.gameArgs.players[declaredBy].name;
 
     return (
       <Dialog
@@ -324,7 +307,7 @@ export class Board extends React.Component<BoardProps, BoardState> {
           <Typography variant="h4">{this.winnerMessage()}</Typography>
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body1">{declaredByName} has declared the game over.</Typography>
+          <Typography variant="body1">{this.playerName(declaredBy)} has declared the game over.</Typography>
           {this.renderFinalScores()}
           {this.renderFinalPayouts(finalMergers)}
         </DialogContent>

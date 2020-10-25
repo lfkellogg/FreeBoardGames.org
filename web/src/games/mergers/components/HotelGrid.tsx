@@ -41,9 +41,11 @@ export class HotelGrid extends React.Component<HotelGridProps, HotelGridState> {
     const isLastPlaced = this.props.lastPlacedHotel === hotel.id;
     const lastPlacedLabel = isLastPlaced ? <StarIcon></StarIcon> : '';
     const removedLabel = hotel.hasBeenRemoved ? <ClearIcon></ClearIcon> : '';
+    const elementId = `hotel-${hotel.id}`;
     return (
-      <td key={hotel.id}>
+      <td key={elementId}>
         <div
+          id={elementId}
           className={`${css.Hotel} ${this.hotelClass(hotel)} ${hoverClass}`}
           onClick={() => this.props.onHotelClicked(hotel.id)}
           onMouseEnter={() => this.setState({ hoveredHotel: hotel.id })}
