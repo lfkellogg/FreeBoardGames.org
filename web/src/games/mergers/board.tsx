@@ -1,9 +1,5 @@
 import * as React from 'react';
 import Button from '@material-ui/core/Button';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
 import Typography from '@material-ui/core/Typography/Typography';
 import { IGameArgs } from 'gamesShared/definitions/game';
 import { GameLayout } from 'gamesShared/components/fbg/GameLayout';
@@ -40,6 +36,7 @@ export interface BoardState {
 //  - generate coverage report
 //
 // Nice to have:
+//  - refactor out "MergersBoard" class to handle all of the blah(hotels, something) methods in utils
 //  - test what happens around unplayable tiles (e.g. if all tiles are unplayable)
 //  - test drawHotels()
 //  - animations
@@ -228,25 +225,19 @@ export class Board extends React.Component<BoardProps, BoardState> {
   }
 
   maybeRenderPriceCard() {
-    const onClose = () => this.setState({ showPriceCard: false });
+    if (!this.state.showPriceCard) {
+      return null;
+    }
 
     return (
-      <Dialog
-        className={css.Mergers}
-        onClose={onClose}
-        aria-labelledby="merger-dialog-title"
-        open={this.state.showPriceCard}
+      <MergersDialog
+        dialogId="price-card-dialog"
+        title="Stock Price and Bonus by Number of Stock"
+        onClose={() => this.setState({ showPriceCard: false })}
+        closeButtonText="CLOSE"
       >
-        <DialogTitle id="merger-dialog-title">Stock Price and Bonus by Number of Stock</DialogTitle>
-        <DialogContent>
-          <StockGuide></StockGuide>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} color="primary" autoFocus>
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <StockGuide></StockGuide>
+      </MergersDialog>
     );
   }
 
@@ -288,35 +279,23 @@ export class Board extends React.Component<BoardProps, BoardState> {
   }
 
   maybeRenderGameOverDetails() {
-    if (!this.props.ctx.gameover) {
+    if (!this.props.ctx.gameover || this.state.gameOverDetailsDismissed) {
       return;
     }
 
-    const onClose = () => this.setState({ gameOverDetailsDismissed: true });
-
-    const { declaredBy, finalMergers } = this.props.ctx.gameover;
-
     return (
-      <Dialog
-        className={css.Mergers}
-        onClose={onClose}
-        aria-labelledby="game-over-title"
-        open={!this.state.gameOverDetailsDismissed}
+      <MergersDialog
+        dialogId="game-over-dialog"
+        title={this.winnerMessage()}
+        onClose={() => this.setState({ gameOverDetailsDismissed: true })}
+        closeButtonText="OK"
       >
-        <DialogTitle disableTypography id="game-over-title">
-          <Typography variant="h4">{this.winnerMessage()}</Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body1">{this.playerName(declaredBy)} has declared the game over.</Typography>
-          {this.renderFinalScores()}
-          {this.renderFinalPayouts(finalMergers)}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} color="primary" autoFocus>
-            OK
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <Typography variant="body1">
+          {this.playerName(this.props.ctx.gameover.declaredBy)} has declared the game over.
+        </Typography>
+        {this.renderFinalScores()}
+        {this.renderFinalPayouts(this.props.ctx.gameover.finalMergers)}
+      </MergersDialog>
     );
   }
 

@@ -1,7 +1,5 @@
 import * as React from 'react';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@material-ui/core';
-import Paper, { PaperProps } from '@material-ui/core/Paper';
-import Draggable from 'react-draggable';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@material-ui/core';
 
 import css from '../Board.css';
 
@@ -13,7 +11,6 @@ export interface MergersDialogProps {
   children: React.ReactNode;
 }
 
-// TODO: use this for the other dialogs
 export class MergersDialog extends React.Component<MergersDialogProps> {
   constructor(props: MergersDialogProps) {
     super(props);
@@ -23,26 +20,17 @@ export class MergersDialog extends React.Component<MergersDialogProps> {
     return `${this.props.dialogId}-${suffix}`;
   }
 
-  createPaperComponent(handle: string) {
-    return (props: PaperProps) => (
-      <Draggable handle={handle} cancel={'[class*="MuiDialogContent-root"]'}>
-        <Paper {...props} />
-      </Draggable>
-    );
-  }
-
   render() {
     return (
       <Dialog
         id={this.props.dialogId}
         className={css.Mergers}
         onClose={this.props.onClose}
-        PaperComponent={this.createPaperComponent(this.createId('title'))}
         aria-labelledby={this.createId('title')}
         open
       >
-        <DialogTitle id={this.createId('title')} style={{ cursor: 'move' }}>
-          {this.props.title}
+        <DialogTitle disableTypography id={this.createId('title')}>
+          <Typography variant="h4">{this.props.title}</Typography>
         </DialogTitle>
         <DialogContent>{this.props.children}</DialogContent>
         <DialogActions>
