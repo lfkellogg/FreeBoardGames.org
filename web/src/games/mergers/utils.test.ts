@@ -1,42 +1,85 @@
-import Hotels from './hotels';
 import { Chain } from './types';
-
-const UNMERGEABLE_SIZE_OF_ONE = 0;
+import { fillStockMap, playersInDescOrderOfStock, playersInMajority, playersInMinority } from './utils';
 
 describe('utils', () => {
-  describe('isPermanentlyUnplayable', () => {
-    it('returns true if it would merge two unmergeable chains', () => {
-      const hotels = new Hotels([
-        [
-          { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower },
-          { id: '2-A' }, // playing this tile would merge 1-A and 3-A
-          { id: '3-A', hasBeenPlaced: true, chain: Chain.Continental },
-        ],
-      ]);
-      expect(hotels.isPermanentlyUnplayable({ id: '2-A' }, UNMERGEABLE_SIZE_OF_ONE)).toBe(true);
+  describe('playersInDescOrderOfStock', () => {
+    it('should sort by the given chain', () => {
+      const player0 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 3, [Chain.American]: 1 } };
+      const player1 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 4, [Chain.American]: 2 } };
+      const player2 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 1, [Chain.American]: 3 } };
+      const players = { '0': player0, '1': player1, '2': player2 };
+      const result = playersInDescOrderOfStock(players, Chain.Tower);
+      expect(result).toEqual([player1, player0, player2]);
     });
+  });
 
-    it('returns false if it would bring two new tiles into an unmergeable chain', () => {
-      const hotels = new Hotels([
-        [
-          { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower },
-          { id: '2-A' }, // playing this tile would add it, and 3-A, to Tower
-          { id: '3-A', hasBeenPlaced: true },
-        ],
-      ]);
-      expect(hotels.isPermanentlyUnplayable({ id: '2-A' }, UNMERGEABLE_SIZE_OF_ONE)).toBe(false);
+  describe('playersInMajority', () => {
+    it('chooses a single player majority', () => {
+      const player0 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 3 } };
+      const player1 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 4 } };
+      const player2 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 1 } };
+      const players = { '0': player0, '1': player1, '2': player2 };
+      const result = playersInMajority(players, Chain.Tower);
+      expect(result).toEqual([player1]);
     });
+    it('chooses a multiple player majority', () => {
+      const player0 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 3 } };
+      const player1 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 3 } };
+      const player2 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 3 } };
+      const players = { '0': player0, '1': player1, '2': player2 };
+      const result = playersInMajority(players, Chain.Tower);
+      expect(result).toEqual([player0, player1, player2]);
+    });
+    it('chooses an empty majority', () => {
+      const player0 = { stocks: fillStockMap(0) };
+      const player1 = { stocks: fillStockMap(0) };
+      const player2 = { stocks: fillStockMap(0) };
+      const players = { '0': player0, '1': player1, '2': player2 };
+      const result = playersInMajority(players, Chain.Tower);
+      expect(result).toEqual([]);
+    });
+  });
 
-    it('returns false if it touches two of the same unmergeable chain, plus one', () => {
-      const hotels = new Hotels([
-        [
-          { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower },
-          { id: '2-A' }, // playing this tile would add it, and 2-B, to Tower
-          { id: '3-A', hasBeenPlaced: true, chain: Chain.Tower },
-        ],
-        [{ id: '1-B' }, { id: '2-B', hasBeenPlaced: true }, { id: '3-B' }],
-      ]);
-      expect(hotels.isPermanentlyUnplayable({ id: '2-A' }, UNMERGEABLE_SIZE_OF_ONE)).toBe(false);
+  describe('playersInMinority', () => {
+    it('chooses the second place player', () => {
+      const player0 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 3 } };
+      const player1 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 4 } };
+      const player2 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 1 } };
+      const players = { '0': player0, '1': player1, '2': player2 };
+      const result = playersInMinority(players, Chain.Tower);
+      expect(result).toEqual([player0]);
+    });
+    it('chooses a multiple player minority', () => {
+      const player0 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 3 } };
+      const player1 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 4 } };
+      const player2 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 3 } };
+      const players = { '0': player0, '1': player1, '2': player2 };
+      const result = playersInMinority(players, Chain.Tower);
+      expect(result).toEqual([player0, player2]);
+    });
+    it('chooses an empty minority when only one player has stocks', () => {
+      const player0 = { stocks: fillStockMap(0) };
+      const player1 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 4 } };
+      const player2 = { stocks: fillStockMap(0) };
+      const players = { '0': player0, '1': player1, '2': player2 };
+      const result = playersInMinority(players, Chain.Tower);
+      expect(result).toEqual([]);
+    });
+    it('chooses an empty minority when multiple players with the only stock are tied', () => {
+      const player0 = { stocks: fillStockMap(0) };
+      const player1 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 4 } };
+      const player2 = { stocks: { ...fillStockMap(0), [Chain.Tower]: 4 } };
+      const players = { '0': player0, '1': player1, '2': player2 };
+      const result = playersInMinority(players, Chain.Tower);
+      expect(result).toEqual([]);
+    });
+    it('chooses an empty minority when no one has stock', () => {
+      const player0 = { stocks: fillStockMap(0) };
+      const player1 = { stocks: fillStockMap(0) };
+      const player2 = { stocks: fillStockMap(0) };
+      const players = { '0': player0, '1': player1, '2': player2 };
+      const result = playersInMinority(players, Chain.Tower);
+      expect(result).toEqual([]);
     });
   });
 });
