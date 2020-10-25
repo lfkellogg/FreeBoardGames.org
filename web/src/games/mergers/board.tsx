@@ -1,5 +1,4 @@
 import * as React from 'react';
-import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography/Typography';
 import { IGameArgs } from 'gamesShared/definitions/game';
 import { GameLayout } from 'gamesShared/components/fbg/GameLayout';
@@ -7,13 +6,12 @@ import { Ctx } from 'boardgame.io';
 
 import css from './Board.css';
 import { HotelGrid } from './components/HotelGrid';
-import { StockLabel } from './components/StockLabel';
-import { StockGuide } from './components/StockGuide';
-import { Chain, IG, Merger, Player, Score } from './types';
+import { IG, Merger, Score } from './types';
 import { PlayerActions } from './components/PlayerActions';
 import { MergerDetails } from './components/MergerDetails';
 import { MergersDialog } from './components/MergersDialog';
 import Hotels from './hotels';
+import { MergersGameStatus } from './components/MergersGameStatus';
 
 export interface BoardProps {
   G: IG;
@@ -26,7 +24,6 @@ export interface BoardProps {
 export interface BoardState {
   mergerDetailsDismissed: boolean;
   gameOverDetailsDismissed: boolean;
-  showPriceCard: boolean;
 }
 
 // TODOs
@@ -48,7 +45,6 @@ export class Board extends React.Component<BoardProps, BoardState> {
     this.state = {
       mergerDetailsDismissed: false,
       gameOverDetailsDismissed: false,
-      showPriceCard: false,
     };
   }
 
@@ -67,10 +63,6 @@ export class Board extends React.Component<BoardProps, BoardState> {
     return this.props.ctx.playOrder.indexOf(id);
   }
 
-  playerState(id: string = this.playerID()): Player {
-    return this.props.G.players[id];
-  }
-
   playerName(id: string = this.playerID()): string {
     if (!this.props.gameArgs) {
       return `Player ${id}`;
@@ -86,125 +78,6 @@ export class Board extends React.Component<BoardProps, BoardState> {
     return this.props.ctx.activePlayers && this.props.ctx.activePlayers[this.playerIndex()];
   }
 
-  hotels(): Hotels {
-    return new Hotels(this.props.G.hotels);
-  }
-
-  winnerMessage(): string {
-    const { winner, winners } = this.props.ctx.gameover;
-    if (winner) {
-      return `${this.playerName(winner)} wins!`;
-    } else {
-      return `${winners.map((id) => this.playerName(id)).join(' & ')} tied!`;
-    }
-  }
-
-  gameOverMessage(): string | undefined {
-    if (!this.props.ctx.gameover) {
-      return;
-    }
-
-    const { scores } = this.props.ctx.gameover;
-    const scoresMessage = scores.map((s) => `${this.playerName(s.id)}: $${s.money}`).join(', ');
-    return `${this.winnerMessage()} Scores: ${scoresMessage}`;
-  }
-
-  renderStock(chain: Chain, count: number, hideEmpty?: boolean) {
-    const hiddenClass = hideEmpty && count === 0 ? css.HiddenStock : '';
-    return (
-      <div key={`stock-count-${chain}`} className={`${css.PlayerStock} ${hiddenClass}`}>
-        <StockLabel chain={chain}></StockLabel>
-        <div className={css.PlayerStockCount}>{`/${count}`}</div>
-      </div>
-    );
-  }
-
-  renderPlayers() {
-    if (!this.props.gameArgs) {
-      return null;
-    }
-
-    return (
-      <div className={css.WrapRow}>
-        <div className={css.MarginRight}>Current turn:</div>
-        {this.props.gameArgs.players.map((player) => {
-          let turnClass = '';
-          if (!this.props.ctx.gameover && this.props.ctx.currentPlayer === `${player.playerID}`) {
-            if (this.props.ctx.currentPlayer === this.playerID()) {
-              turnClass = css.YourTurn;
-            } else {
-              turnClass = css.CurrentTurn;
-            }
-          }
-          const elementId = `player-label-${player.playerID}`;
-          return (
-            <div id={elementId} key={elementId} className={`${css.Player} ${turnClass}`}>
-              {player.name}
-            </div>
-          );
-        })}
-        <div className={css.Spacer}></div>
-        <Button variant="text" color="primary" onClick={() => this.setState({ showPriceCard: true })}>
-          Show Guide
-        </Button>
-      </div>
-    );
-  }
-
-  renderAvailableStock(chain: Chain) {
-    debugger;
-    const size = this.hotels().sizeOfChain(chain);
-    const stockPrice = this.hotels().priceOfStockBySize(chain, size);
-    const stockPriceMessage = stockPrice === undefined ? '--' : `$${stockPrice}`;
-    const hotelSizeMessage = stockPrice === undefined ? '' : ` (${size})`;
-    const elementId = `available-stock-${chain}`;
-    return (
-      <div id={elementId} key={elementId} className={css.AvailableStockAndPrice}>
-        {this.renderStock(chain, this.props.G.availableStocks[chain])}
-        {stockPriceMessage}
-        {hotelSizeMessage}
-      </div>
-    );
-  }
-
-  renderAvailableStocks() {
-    return (
-      <div className={css.WrapRow}>
-        <div className={css.MarginRight}>Available stocks:</div>
-        {Object.keys(Chain).map((key) => this.renderAvailableStock(Chain[key]))}
-      </div>
-    );
-  }
-
-  renderPlayerStatus() {
-    const player = this.playerState();
-    return (
-      <div id="player-status" className={css.WrapRow}>
-        <div className={css.MarginRight}>You have:</div>
-        <span className={css.PlayerMoney}>${player.money}</span>
-        {Object.keys(Chain).map((key) => this.renderStock(Chain[key], player.stocks[Chain[key]], true))}
-      </div>
-    );
-  }
-
-  renderLastMove() {
-    let message: string;
-    message = this.props.G.lastMove;
-    for (const p of this.props.gameArgs?.players || []) {
-      message = message.replace(new RegExp(`Player ${p.playerID}`, 'g'), p.name);
-    }
-    return (
-      <div id="last-move" className={css.WrapRow}>
-        <div className={css.MarginRight}>Last move:</div>
-        <div>{message}</div>
-      </div>
-    );
-  }
-
-  onCloseMergerDetails() {
-    this.setState({ mergerDetailsDismissed: true });
-  }
-
   maybeRenderMergerDetails() {
     if (this.props.ctx.phase !== 'mergerPhase' || this.state.mergerDetailsDismissed) {
       return;
@@ -216,7 +89,7 @@ export class Board extends React.Component<BoardProps, BoardState> {
       <MergersDialog
         dialogId="merger-details-dialog"
         title={`${chainToMerge} is merging into ${survivingChain}!`}
-        onClose={() => this.onCloseMergerDetails()}
+        onClose={() => this.setState({ mergerDetailsDismissed: true })}
         closeButtonText="OK"
       >
         <MergerDetails
@@ -224,23 +97,6 @@ export class Board extends React.Component<BoardProps, BoardState> {
           playOrder={this.props.ctx.playOrder}
           playerIdToNameFn={(id: string) => this.playerName(id)}
         />
-      </MergersDialog>
-    );
-  }
-
-  maybeRenderPriceCard() {
-    if (!this.state.showPriceCard) {
-      return null;
-    }
-
-    return (
-      <MergersDialog
-        dialogId="price-card-dialog"
-        title="Stock Price and Bonus by Number of Stock"
-        onClose={() => this.setState({ showPriceCard: false })}
-        closeButtonText="CLOSE"
-      >
-        <StockGuide></StockGuide>
       </MergersDialog>
     );
   }
@@ -282,6 +138,25 @@ export class Board extends React.Component<BoardProps, BoardState> {
     );
   }
 
+  winnerMessage(): string {
+    const { winner, winners } = this.props.ctx.gameover;
+    if (winner) {
+      return `${this.playerName(winner)} wins!`;
+    } else {
+      return `${winners.map((id) => this.playerName(id)).join(' & ')} tied!`;
+    }
+  }
+
+  gameOverMessage(): string | undefined {
+    if (!this.props.ctx.gameover) {
+      return;
+    }
+
+    const { scores } = this.props.ctx.gameover;
+    const scoresMessage = scores.map((s) => `${this.playerName(s.id)}: $${s.money}`).join(', ');
+    return `${this.winnerMessage()} Scores: ${scoresMessage}`;
+  }
+
   maybeRenderGameOverDetails() {
     if (!this.props.ctx.gameover || this.state.gameOverDetailsDismissed) {
       return;
@@ -304,21 +179,26 @@ export class Board extends React.Component<BoardProps, BoardState> {
   }
 
   render() {
+    const hotels = new Hotels(this.props.G.hotels);
     return (
       <GameLayout allowWiderScreen={true} gameArgs={this.props.gameArgs}>
-        <div className={`${css.Mergers} ${css.MergersContainer}`}>
-          {this.renderPlayers()}
-          {this.renderAvailableStocks()}
-          {this.renderLastMove()}
+        <MergersGameStatus
+          hotels={hotels}
+          player={this.props.G.players[this.playerID()]}
+          availableStocks={this.props.G.availableStocks}
+          lastMove={this.props.G.lastMove}
+          currentPlayer={!this.props.ctx.gameover && this.props.ctx.currentPlayer}
+          players={this.props.gameArgs?.players}
+        >
           <HotelGrid
-            hotels={this.hotels()}
+            hotels={hotels}
             lastPlacedHotel={this.props.G.lastPlacedHotel}
             isPlacingHotel={this.playerStage() === 'placeHotelStage'}
             playerID={this.props.playerID}
             onHotelClicked={this.props.moves.placeHotel}
           />
           <PlayerActions
-            hotels={this.hotels()}
+            hotels={hotels}
             players={this.props.G.players}
             availableStocks={this.props.G.availableStocks}
             merger={this.props.G.merger}
@@ -329,11 +209,9 @@ export class Board extends React.Component<BoardProps, BoardState> {
             playerStage={this.playerStage()}
             gameOverMessage={this.gameOverMessage()}
           />
-          {this.renderPlayerStatus()}
-          {this.maybeRenderMergerDetails()}
-          {this.maybeRenderGameOverDetails()}
-          {this.maybeRenderPriceCard()}
-        </div>
+        </MergersGameStatus>
+        {this.maybeRenderMergerDetails()}
+        {this.maybeRenderGameOverDetails()}
       </GameLayout>
     );
   }

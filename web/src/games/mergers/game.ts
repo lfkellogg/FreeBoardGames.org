@@ -227,19 +227,16 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
   const player = G.players[ctx.playerID];
   const originalStockCount = player.stocks[chainToMerge];
 
-  if (originalStockCount === 0) {
+  if (player.stocks[chainToMerge] === 0) {
     G.lastMove = `Player ${ctx.playerID} has no ${chainToMerge} stock`;
   } else {
     G.lastMove = '';
   }
 
   let toSwap = swap || 0;
-  toSwap = Math.min(toSwap, originalStockCount);
+  toSwap = Math.min(toSwap, player.stocks[chainToMerge]);
   toSwap = Math.min(toSwap, G.availableStocks[survivingChain] * 2);
   toSwap = roundDownToNearest2(toSwap);
-
-  let toSell = sell || 0;
-  toSell = Math.min(toSell, originalStockCount);
 
   if (toSwap > 0) {
     G.lastMove = `Player ${ctx.playerID} swaps ${toSwap} ${chainToMerge} for ${toSwap / 2} ${survivingChain}`;
@@ -251,6 +248,9 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
   // player receives N / 2 stocks of the surviving chain
   player.stocks[survivingChain] += toSwap / 2;
   G.availableStocks[survivingChain] -= toSwap / 2;
+
+  let toSell = sell || 0;
+  toSell = Math.min(toSell, player.stocks[chainToMerge]);
 
   // players sells stocks
   if (toSell > 0) {
