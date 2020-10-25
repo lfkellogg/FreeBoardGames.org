@@ -10,19 +10,12 @@ import {
   mergerPhaseNextTurn,
   MergersGame,
 } from './game';
+import Hotels from './hotels';
 import { Chain, Hotel, IG } from './types';
 import { fillStockMap, setupPlayers, playersInDescOrderOfStock, playersInMajority, playersInMinority } from './utils';
 
 // TODO:
 // - test endgame
-
-function setupTestHotels(): Hotel[][] {
-  return [
-    [{ id: '1-A' }, { id: '2-A' }, { id: '3-A' }],
-    [{ id: '1-B' }, { id: '2-B' }, { id: '3-B' }],
-    [{ id: '1-C' }, { id: '2-C' }, { id: '3-C' }],
-  ];
-}
 
 // TODO: clean this up to use more of the normal game setup
 function getScenario(hotels?: Hotel[][]) {
@@ -30,7 +23,7 @@ function getScenario(hotels?: Hotel[][]) {
     ...MergersGame,
     setup: (ctx: Ctx) => {
       const G: IG = {
-        hotels: hotels || setupTestHotels(),
+        hotels: hotels || Hotels.buildGrid(3, 3),
         players: setupPlayers(ctx.numPlayers),
         availableStocks: fillStockMap(25),
       };
@@ -79,12 +72,13 @@ function getAllTestClients(numPlayers: number = 2, hotels?: Hotel[][]): Client[]
 describe('placeHotel', () => {
   let client: Client;
   let originalBoard: Hotel[][];
+
   beforeEach(() => {
     originalBoard = [
       [
         { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower },
         { id: '2-A', hasBeenPlaced: true, chain: Chain.Tower },
-        { id: '3-A', drawnByPlayer: '0' }, // would join Tower, and bring in 3-B as well
+        { id: '3-A', drawnByPlayer: '0' }, // would join Tower, and bring in 3-B
       ],
       [
         { id: '1-B', drawnByPlayer: '0' }, // would join Tower
@@ -97,6 +91,20 @@ describe('placeHotel', () => {
         { id: '3-C', drawnByPlayer: '0' }, // would form a new chain w/ 3-B
       ],
     ];
+    // originalBoard = setupTestHotels();
+
+    // originalBoard.mergeHotel('1-A', { hasBeenPlaced: true, chain: Chain.Tower });
+    // originalBoard.mergeHotel('2-A', { hasBeenPlaced: true, chain: Chain.Tower });
+    // originalBoard.mergeHotel('3-A', { drawnByPlayer: '0' }); // would join Tower, and bring in 3-B
+
+    // originalBoard.mergeHotel('1-B', { drawnByPlayer: '0' }); // would join Tower
+    // // 2-B is unchanged
+    // originalBoard.mergeHotel('3-B', { hasBeenPlaced: true });
+
+    // // 3-A is unchanged
+    // // 3-B is unchanged
+    // originalBoard.mergeHotel('3-C', { drawnByPlayer: '0' }); // would form a new chain w/ 3-B
+
     client = getSingleTestClient(2, originalBoard);
   });
   it('sets the last placed hotel', () => {

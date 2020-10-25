@@ -9,6 +9,7 @@ import * as utils from '../utils';
 
 import { PlayerActions } from './PlayerActions';
 import css from './PlayerActions.css';
+import Hotels from '../hotels';
 
 Enzyme.configure({ adapter: new Adapter() });
 
@@ -35,7 +36,7 @@ describe('#renderBuyStock', () => {
 
     return Enzyme.mount(
       <PlayerActions
-        hotels={state1.G.hotels}
+        hotels={new Hotels(state1.G.hotels)}
         players={state1.G.players}
         availableStocks={state1.G.availableStocks}
         merger={state1.G.merger}
@@ -50,8 +51,9 @@ describe('#renderBuyStock', () => {
   };
 
   const setUpHotel = (G: IG, id: string, chain?: Chain) => {
-    utils.getHotel(G.hotels, id).hasBeenPlaced = true;
-    utils.getHotel(G.hotels, id).chain = chain;
+    const hotels = new Hotels(G.hotels);
+    hotels.getHotel(id).hasBeenPlaced = true;
+    hotels.getHotel(id).chain = chain;
   };
 
   describe('trying to buy zero stocks, even with no money', () => {

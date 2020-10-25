@@ -1,14 +1,15 @@
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import React, { ReactNode } from 'react';
-import { Chain, Hotel, Merger, Player } from '../types';
-import { fillStockMap, isUnplayable, playerHotels, priceOfStock, sizeOfChain } from '../utils';
+import { Chain, Merger, Player } from '../types';
+import { fillStockMap } from '../utils';
 
 import { StockLabel } from './StockLabel';
 import css from './PlayerActions.css';
+import Hotels from '../hotels';
 
 interface PlayerActionsProps {
-  hotels?: Hotel[][];
+  hotels?: Hotels;
   players?: Record<string, Player>;
   availableStocks?: Record<Chain, number>;
   merger?: Merger;
@@ -91,7 +92,7 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
         return `There are only ${numAvailable} ${chain} available`;
       }
       totalCount += numToBuy;
-      totalPrice += numToBuy * priceOfStock(chain, this.props.hotels);
+      totalPrice += numToBuy * this.props.hotels.priceOfStock(chain);
     }
     if (totalCount > 3) {
       return 'You  may only buy up to 3 stocks per turn';
@@ -111,9 +112,9 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
   }
 
   renderPlaceHotel() {
-    const hasPlayableHotel = !!playerHotels(this.props.hotels, this.playerID()).find(
-      (h) => !isUnplayable(this.props.hotels, h),
-    );
+    const hasPlayableHotel = !!this.props.hotels
+      .playerHotels(this.playerID())
+      .find((h) => !this.props.hotels.isUnplayable(h));
     if (!hasPlayableHotel) {
       const label = 'Continue (you have no playable hotels)';
       return this.renderButton(label, this.props.moves.placeHotel);
@@ -128,7 +129,7 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
 
   renderChooseChain() {
     const chainLabels = Object.keys(Chain)
-      .filter((key) => sizeOfChain(Chain[key], this.props.hotels) === 0)
+      .filter((key) => this.props.hotels.sizeOfChain(Chain[key]) === 0)
       .map((key) => this.renderChooseChainLabel(Chain[key]));
 
     return (
@@ -140,7 +141,7 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
   }
 
   renderStockToBuy(chain: Chain) {
-    const stockPrice = priceOfStock(chain, this.props.hotels);
+    const stockPrice = this.props.hotels.priceOfStock(chain);
     if (stockPrice === undefined) {
       return;
     }
@@ -215,7 +216,7 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
   renderBreakMergerTieChain(message: string, move: string) {
     const chainSizes = this.props.merger.mergingChains.map((c) => ({
       chain: c,
-      size: sizeOfChain(c, this.props.hotels),
+      size: this.props.hotels.sizeOfChain(c),
     }));
     const biggestChainSize = chainSizes[0].size;
     const choices = chainSizes

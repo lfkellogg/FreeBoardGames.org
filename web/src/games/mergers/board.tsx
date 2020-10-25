@@ -10,10 +10,10 @@ import { HotelGrid } from './components/HotelGrid';
 import { StockLabel } from './components/StockLabel';
 import { StockGuide } from './components/StockGuide';
 import { Chain, IG, Merger, Player, Score } from './types';
-import { priceOfStockBySize, sizeOfChain } from './utils';
 import { PlayerActions } from './components/PlayerActions';
 import { MergerDetails } from './components/MergerDetails';
 import { MergersDialog } from './components/MergersDialog';
+import Hotels from './hotels';
 
 export interface BoardProps {
   G: IG;
@@ -32,8 +32,7 @@ export interface BoardState {
 // TODOs
 // Must do:
 //  - add instructions & image
-//  - more test coverage of main board
-//  - generate coverage report
+//  - more test coverage of game.ts && utils.ts
 //
 // Nice to have:
 //  - refactor out "MergersBoard" class to handle all of the blah(hotels, something) methods in utils
@@ -85,6 +84,10 @@ export class Board extends React.Component<BoardProps, BoardState> {
 
   playerStage(): string {
     return this.props.ctx.activePlayers && this.props.ctx.activePlayers[this.playerIndex()];
+  }
+
+  hotels(): Hotels {
+    return new Hotels(this.props.G.hotels);
   }
 
   winnerMessage(): string {
@@ -149,8 +152,9 @@ export class Board extends React.Component<BoardProps, BoardState> {
   }
 
   renderAvailableStock(chain: Chain) {
-    const size = sizeOfChain(chain, this.props.G.hotels);
-    const stockPrice = priceOfStockBySize(chain, size);
+    debugger;
+    const size = this.hotels().sizeOfChain(chain);
+    const stockPrice = this.hotels().priceOfStockBySize(chain, size);
     const stockPriceMessage = stockPrice === undefined ? '--' : `$${stockPrice}`;
     const hotelSizeMessage = stockPrice === undefined ? '' : ` (${size})`;
     const elementId = `available-stock-${chain}`;
@@ -307,14 +311,14 @@ export class Board extends React.Component<BoardProps, BoardState> {
           {this.renderAvailableStocks()}
           {this.renderLastMove()}
           <HotelGrid
-            hotels={this.props.G.hotels}
+            hotels={this.hotels()}
             lastPlacedHotel={this.props.G.lastPlacedHotel}
             isPlacingHotel={this.playerStage() === 'placeHotelStage'}
             playerID={this.props.playerID}
             onHotelClicked={this.props.moves.placeHotel}
           />
           <PlayerActions
-            hotels={this.props.G.hotels}
+            hotels={this.hotels()}
             players={this.props.G.players}
             availableStocks={this.props.G.availableStocks}
             merger={this.props.G.merger}

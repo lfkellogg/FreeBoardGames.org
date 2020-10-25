@@ -2,29 +2,24 @@ import { INVALID_MOVE } from 'boardgame.io/core';
 import { Game, Ctx } from 'boardgame.io';
 import { Chain, Hotel, Player, IG, Merger } from './types';
 import {
-  adjacentHotels,
-  getColumn,
-  getHotel,
-  getRow,
-  isPermanentlyUnplayable,
-  isUnplayable,
-  majorityBonus,
-  minorityBonus,
   playersInMajority,
   playersInMinority,
-  priceOfStock,
   roundUpToNearest100,
   roundDownToNearest2,
   setupInitialState,
-  sizeOfChain,
-  playerHotels,
 } from './utils';
+import Hotels from './hotels';
+
+export function getHotels(G: IG): Hotels {
+  return new Hotels(G.hotels);
+}
 
 export function placeHotel(G: IG, ctx: Ctx, id?: string) {
+  const hotels = getHotels(G);
   if (!id) {
-    const hotels = playerHotels(G.hotels, ctx.playerID);
-    const hasPlayableHotels = !!hotels.find((h) => !isUnplayable(G.hotels, h));
-    if (hasPlayableHotels && hotels.length > 0) {
+    const playerHotels = hotels.playerHotels(ctx.playerID);
+    const hasPlayableHotels = !!playerHotels.find((h) => !hotels.isUnplayable(h));
+    if (hasPlayableHotels && playerHotels.length > 0) {
       return INVALID_MOVE;
     }
     G.lastMove = `Player ${ctx.playerID} doesn't have any playable hotels`;
@@ -32,14 +27,14 @@ export function placeHotel(G: IG, ctx: Ctx, id?: string) {
     return;
   }
 
-  const hotel: Hotel = getHotel(G.hotels, id);
-  if (hotel.hasBeenPlaced || hotel.drawnByPlayer !== ctx.playerID || isUnplayable(G.hotels, hotel)) {
+  const hotel = hotels.getHotel(id);
+  if (hotel.hasBeenPlaced || hotel.drawnByPlayer !== ctx.playerID || hotels.isUnplayable(hotel)) {
     return INVALID_MOVE;
   }
   hotel.hasBeenPlaced = true;
   G.lastPlacedHotel = id;
 
-  const adjacent = adjacentHotels(G.hotels, hotel);
+  const adjacent = hotels.adjacentHotels(hotel);
 
   if (adjacent.length > 0) {
     const adjacentChains = adjacent.map((h) => h.chain);
@@ -55,7 +50,7 @@ export function placeHotel(G: IG, ctx: Ctx, id?: string) {
     } else if (numAdjacentChains > 1) {
       // merger
       const mergingChains = Array.from(adjacentDefinedChainSet);
-      mergingChains.sort((a, b) => sizeOfChain(b, G.hotels) - sizeOfChain(a, G.hotels));
+      mergingChains.sort((a, b) => hotels.sizeOfChain(b) - hotels.sizeOfChain(a));
       G.merger = { mergingChains };
       ctx.events.setPhase('chooseSurvivingChainPhase');
     }
@@ -65,18 +60,21 @@ export function placeHotel(G: IG, ctx: Ctx, id?: string) {
 
 // absorb a hotel and all it connects to, into a chain
 export function absorbNewHotels(G: IG, chain: Chain, id: string, idsAbsorbed: Set<string> = new Set([id])) {
-  const hotel = getHotel(G.hotels, id);
-  adjacentHotels(G.hotels, hotel)
+  const hotels = getHotels(G);
+  const hotel = hotels.getHotel(id);
+  hotels
+    .adjacentHotels(hotel)
     .filter((h) => !idsAbsorbed.has(h.id))
     .forEach((h) => absorbNewHotels(G, chain, h.id, idsAbsorbed.add(h.id)));
   hotel.chain = chain;
 }
 
 export function chooseNewChain(G: IG, ctx: Ctx, chain: Chain) {
-  if (sizeOfChain(chain, G.hotels) > 0) {
+  const hotels = getHotels(G);
+  if (hotels.sizeOfChain(chain) > 0) {
     return INVALID_MOVE;
   }
-  const lastPlacedHotel = getHotel(G.hotels, G.lastPlacedHotel);
+  const lastPlacedHotel = hotels.getHotel(G.lastPlacedHotel);
   lastPlacedHotel.chain = chain;
   absorbNewHotels(G, chain, lastPlacedHotel.id);
 
@@ -90,7 +88,8 @@ export function chooseNewChain(G: IG, ctx: Ctx, chain: Chain) {
 }
 
 export function gameCanBeDeclaredOver(G: IG) {
-  const chainSizes = Object.keys(Chain).map((key) => sizeOfChain(Chain[key], G.hotels));
+  const hotels = getHotels(G);
+  const chainSizes = Object.keys(Chain).map((key) => hotels.sizeOfChain(Chain[key]));
   const chainsOnBoard = chainSizes.filter((s) => s > 0).length;
   const unmergeableChains = chainSizes.filter((s) => s > 10).length;
   if (chainsOnBoard > 0 && chainsOnBoard === unmergeableChains) {
@@ -104,6 +103,7 @@ export function gameCanBeDeclaredOver(G: IG) {
 export function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
   G.lastMove = '';
   if (order) {
+    const hotels = getHotels(G);
     const player = G.players[ctx.playerID];
     let purchasesRemaining = 3;
     Object.keys(Chain).forEach((key) => {
@@ -112,7 +112,7 @@ export function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
       if (!num) {
         return;
       }
-      const stockPrice = priceOfStock(chain, G.hotels);
+      const stockPrice = hotels.priceOfStock(chain);
       if (stockPrice === undefined) {
         return;
       }
@@ -147,14 +147,16 @@ export function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
 export function drawHotels(G: IG, ctx: Ctx) {
   // first, find and remove any of this player's unplayable tiles
   const player: Player = G.players[ctx.playerID];
-  playerHotels(G.hotels, player.id)
-    .filter((h) => isPermanentlyUnplayable(G.hotels, h))
+  const hotels = getHotels(G);
+  hotels
+    .playerHotels(player.id)
+    .filter((h) => hotels.isPermanentlyUnplayable(h))
     .forEach((h) => {
       h.drawnByPlayer = undefined;
       h.hasBeenRemoved = true;
     });
 
-  const hotelsToDraw: number = 6 - playerHotels(G.hotels, player.id).length;
+  const hotelsToDraw: number = 6 - hotels.playerHotels(player.id).length;
   for (let i = 0; i < hotelsToDraw; i++) {
     assignRandomHotel(G, ctx, player);
   }
@@ -172,30 +174,31 @@ export function assignRandomHotel(G: IG, ctx: Ctx, player: Player): boolean {
 }
 
 export function getRandomHotel(G: IG, ctx: Ctx): Hotel | undefined {
-  const undrawnHotels = G.hotels.flat().filter((h) => !h.drawnByPlayer && !h.hasBeenRemoved);
+  const undrawnHotels = getHotels(G)
+    .allHotels()
+    .filter((h) => !h.drawnByPlayer && !h.hasBeenRemoved);
   if (undrawnHotels.length > 0) {
     return undrawnHotels[Math.floor(ctx.random.Number() * undrawnHotels.length)];
   }
 }
 
 export function firstBuildTurn(G: IG, ctx: Ctx): number {
+  const hotels = getHotels(G);
   if (G.lastPlacedHotel) {
     // if we're returning from a merger, it's still the current players turn
-    return ctx.playOrder.indexOf(getHotel(G.hotels, G.lastPlacedHotel).drawnByPlayer);
+    return ctx.playOrder.indexOf(hotels.getHotel(G.lastPlacedHotel).drawnByPlayer);
   } else {
-    // otherwise choose first player based on initial hotel placement (closest to top left, letter
-    // first)
-    const allHotels = G.hotels.flat();
-    allHotels.sort((a, b) => getColumn(a) - getColumn(b)).sort((a, b) => getRow(a) - getRow(b));
-    const topLeftMostHotel = allHotels.find((h) => h.hasBeenPlaced);
+    // otherwise choose first player based on initial hotel placement
+    const topLeftMostHotel = hotels.topLeftMostHotel();
     G.lastMove = `Player ${topLeftMostHotel.drawnByPlayer} draws ${topLeftMostHotel.id} and will go first`;
     return ctx.playOrder.indexOf(topLeftMostHotel.drawnByPlayer);
   }
 }
 
 export function chooseSurvivingChain(G: IG, ctx, chain: Chain) {
+  const hotels = getHotels(G);
   // must be the same size as the first (largest) chain in the merge
-  if (sizeOfChain(chain, G.hotels) !== sizeOfChain(G.merger.mergingChains[0], G.hotels)) {
+  if (hotels.sizeOfChain(chain) !== hotels.sizeOfChain(G.merger.mergingChains[0])) {
     return INVALID_MOVE;
   }
   G.merger.survivingChain = chain;
@@ -204,13 +207,14 @@ export function chooseSurvivingChain(G: IG, ctx, chain: Chain) {
 }
 
 export function chooseChainToMerge(G: IG, ctx, chain: Chain) {
+  const hotels = getHotels(G);
   // must be the same size as the first (largest) merging chain
-  if (sizeOfChain(chain, G.hotels) !== sizeOfChain(G.merger.mergingChains[0], G.hotels)) {
+  if (hotels.sizeOfChain(chain) !== hotels.sizeOfChain(G.merger.mergingChains[0])) {
     return INVALID_MOVE;
   }
 
   G.merger.chainToMerge = chain;
-  G.merger.chainSize = sizeOfChain(chain, G.hotels);
+  G.merger.chainSize = hotels.sizeOfChain(chain);
 
   // move the chain to the front of the array
   G.merger.mergingChains.splice(G.merger.mergingChains.indexOf(chain), 1);
@@ -260,7 +264,7 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
 
   player.stocks[chainToMerge] -= toSell;
   G.availableStocks[chainToMerge] += toSell;
-  player.money += toSell * priceOfStock(chainToMerge, G.hotels);
+  player.money += toSell * getHotels(G).priceOfStock(chainToMerge);
   G.merger.swapAndSells[player.id] = { swap: toSwap, sell: toSell };
 
   if (originalStockCount > 0 && player.stocks[chainToMerge] > 0) {
@@ -277,11 +281,12 @@ export function declareGameOver(G: IG, ctx: Ctx, isGameOver: boolean) {
   if (isGameOver) {
     G.lastMove = `Player ${ctx.playerID} declares the game over`;
     // award bonuses for remaining chains
+    const hotels = getHotels(G);
     const chains = new Set<Chain>(
-      G.hotels
-        .flat()
+      hotels
+        .allHotels()
         .map((h) => h.chain)
-        .sort((a, b) => sizeOfChain(a, G.hotels) - sizeOfChain(b, G.hotels))
+        .sort((a, b) => hotels.sizeOfChain(a) - hotels.sizeOfChain(b))
         .filter((c) => !!c),
     );
     const finalMergers = [];
@@ -293,7 +298,7 @@ export function declareGameOver(G: IG, ctx: Ctx, isGameOver: boolean) {
 
     // sell off all remaining stock in those chains
     chains.forEach((c) => {
-      const stockPrice = priceOfStock(c, G.hotels);
+      const stockPrice = hotels.priceOfStock(c);
       if (stockPrice === undefined) {
         return;
       }
@@ -331,21 +336,22 @@ export function declareGameOver(G: IG, ctx: Ctx, isGameOver: boolean) {
 
 export function getBonuses(G: IG, chain: Chain): Record<string, number> {
   const bonuses = {};
+  const hotels = getHotels(G);
   const majority = playersInMajority(G.players, chain);
   if (majority.length === 1) {
     // give first bonus to first player
-    bonuses[majority[0].id] = majorityBonus(G.hotels, chain);
+    bonuses[majority[0].id] = hotels.majorityBonus(chain);
 
     const minority = playersInMinority(G.players, chain);
     if (minority.length === 0) {
       // give minority to the majority as well
-      bonuses[majority[0].id] += minorityBonus(G.hotels, chain);
+      bonuses[majority[0].id] += hotels.minorityBonus(chain);
     } else if (minority.length === 1) {
       // give minority to second place
-      bonuses[minority[0].id] = minorityBonus(G.hotels, chain);
+      bonuses[minority[0].id] = hotels.minorityBonus(chain);
     } else if (minority.length > 1) {
       // split minority bonus between em
-      const total = minorityBonus(G.hotels, chain);
+      const total = hotels.minorityBonus(chain);
       const each = roundUpToNearest100(total / minority.length);
       for (const player of minority) {
         bonuses[player.id] = each;
@@ -353,7 +359,7 @@ export function getBonuses(G: IG, chain: Chain): Record<string, number> {
     }
   } else if (majority.length > 1) {
     // split both bonuses between some number of folks
-    const total = majorityBonus(G.hotels, chain) + minorityBonus(G.hotels, chain);
+    const total = hotels.majorityBonus(chain) + hotels.minorityBonus(chain);
     const each = roundUpToNearest100(total / majority.length);
     for (const player of majority) {
       bonuses[player.id] = each;
@@ -373,12 +379,13 @@ export function awardBonuses(G: IG, chain: Chain) {
 }
 
 export function setupInitialDrawing(G: IG, ctx: Ctx) {
+  const hotels = getHotels(G);
   for (let i = 0; i < ctx.numPlayers; i++) {
     const player = G.players[`${i}`];
 
     // initial random drawing + placement
     assignRandomHotel(G, ctx, player);
-    playerHotels(G.hotels, player.id)[0].hasBeenPlaced = true;
+    hotels.playerHotels(player.id)[0].hasBeenPlaced = true;
 
     // draw 6 more tiles
     for (let j = 0; j < 6; j++) {
@@ -388,19 +395,20 @@ export function setupInitialDrawing(G: IG, ctx: Ctx) {
 }
 
 export function autosetChainToMerge(G: IG) {
+  const hotels = getHotels(G);
   if (!!G.merger.chainToMerge) {
     return;
   }
   if (G.merger.mergingChains.length === 1) {
     G.merger.chainToMerge = G.merger.mergingChains[0];
-    G.merger.chainSize = sizeOfChain(G.merger.chainToMerge, G.hotels);
+    G.merger.chainSize = hotels.sizeOfChain(G.merger.chainToMerge);
     return;
   }
-  const firstChainSize = sizeOfChain(G.merger.mergingChains[0], G.hotels);
-  const secondChainSize = sizeOfChain(G.merger.mergingChains[1], G.hotels);
+  const firstChainSize = hotels.sizeOfChain(G.merger.mergingChains[0]);
+  const secondChainSize = hotels.sizeOfChain(G.merger.mergingChains[1]);
   if (firstChainSize !== secondChainSize) {
     G.merger.chainToMerge = G.merger.mergingChains[0];
-    G.merger.chainSize = sizeOfChain(G.merger.chainToMerge, G.hotels);
+    G.merger.chainSize = hotels.sizeOfChain(G.merger.chainToMerge);
   }
 }
 
@@ -415,7 +423,7 @@ export function mergerPhaseFirstTurn(G: IG, ctx: Ctx) {
 
 // TODO: simplify this
 export function mergerPhaseNextTurn(G: IG, ctx: Ctx, isFirst: boolean = false) {
-  const mergingPlayerID = getHotel(G.hotels, G.lastPlacedHotel).drawnByPlayer;
+  const mergingPlayerID = getHotels(G).getHotel(G.lastPlacedHotel).drawnByPlayer;
   const mergingPlayerPos = ctx.playOrder.indexOf(mergingPlayerID);
 
   // check if the next player needs to go
@@ -522,7 +530,7 @@ export const MergersGame: Game<IG> = {
       onBegin: (G: IG, ctx: Ctx) => {
         if (G.lastPlacedHotel) {
           // if returning from a merger phase, we're now in the buy stock stage
-          const hotel = getHotel(G.hotels, G.lastPlacedHotel);
+          const hotel = getHotels(G).getHotel(G.lastPlacedHotel);
           ctx.events.setActivePlayers({ value: { [hotel.drawnByPlayer]: 'buyStockStage' } });
         }
       },
@@ -547,8 +555,9 @@ export const MergersGame: Game<IG> = {
           return;
         }
         // if there's a biggest chain, set it as the survivor
-        const firstChainSize = sizeOfChain(G.merger.mergingChains[0], G.hotels);
-        const secondChainSize = sizeOfChain(G.merger.mergingChains[1], G.hotels);
+        const hotels = getHotels(G);
+        const firstChainSize = hotels.sizeOfChain(G.merger.mergingChains[0]);
+        const secondChainSize = hotels.sizeOfChain(G.merger.mergingChains[1]);
         if (firstChainSize !== secondChainSize) {
           G.merger.survivingChain = G.merger.mergingChains.shift();
         }

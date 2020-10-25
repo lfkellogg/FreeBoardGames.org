@@ -4,9 +4,10 @@ import ClearIcon from '@material-ui/icons/Clear';
 
 import { Chain, Hotel } from '../types';
 import css from './HotelGrid.css';
+import Hotels from '../hotels';
 
 interface HotelGridProps {
-  hotels: Hotel[][];
+  hotels: Hotels;
   lastPlacedHotel?: string;
   isPlacingHotel: boolean;
   playerID: string;
@@ -86,7 +87,9 @@ export class HotelGrid extends React.Component<HotelGridProps, HotelGridState> {
     const chainTiles = {};
     for (const key of Object.keys(Chain)) {
       const chain = Chain[key];
-      const firstHotel = this.props.hotels.flat().find((h) => h.chain === chain && h.id !== this.props.lastPlacedHotel);
+      const firstHotel = this.props.hotels
+        .allHotels()
+        .find((h) => h.chain === chain && h.id !== this.props.lastPlacedHotel);
       if (firstHotel) {
         chainTiles[firstHotel.id] = chain[0]; // first letter of chain
       }
@@ -96,7 +99,7 @@ export class HotelGrid extends React.Component<HotelGridProps, HotelGridState> {
         <table>
           <tbody>
             {this.renderColumnHeaders()}
-            {this.props.hotels.map(this.renderHotelRow.bind(this, chainTiles))}
+            {this.props.hotels.hotelGrid().map(this.renderHotelRow.bind(this, chainTiles))}
           </tbody>
         </table>
       </div>
