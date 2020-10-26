@@ -17,9 +17,7 @@ export function getHotels(G: IG): Hotels {
 export function placeHotel(G: IG, ctx: Ctx, id?: string) {
   const hotels = getHotels(G);
   if (!id) {
-    const playerHotels = hotels.playerHotels(ctx.playerID);
-    const hasPlayableHotels = !!playerHotels.find((h) => !hotels.isUnplayable(h));
-    if (hasPlayableHotels && playerHotels.length > 0) {
+    if (!!hotels.playerHotels(ctx.playerID).find((h) => !hotels.isUnplayable(h))) {
       return INVALID_MOVE;
     }
     G.lastMove = `Player ${ctx.playerID} doesn't have any playable hotels`;
@@ -100,7 +98,7 @@ export function gameCanBeDeclaredOver(G: IG) {
   return false;
 }
 
-export function buyStock(G: IG, ctx: Ctx, order: Record<Chain, number>) {
+export function buyStock(G: IG, ctx: Ctx, order: Partial<Record<Chain, number>>) {
   G.lastMove = '';
   if (order) {
     const hotels = getHotels(G);
@@ -148,6 +146,7 @@ export function drawHotels(G: IG, ctx: Ctx) {
   // first, find and remove any of this player's unplayable tiles
   const player: Player = G.players[ctx.playerID];
   const hotels = getHotels(G);
+  debugger;
   hotels
     .playerHotels(player.id)
     .filter((h) => hotels.isPermanentlyUnplayable(h))
@@ -176,7 +175,7 @@ export function assignRandomHotel(G: IG, ctx: Ctx, player: Player): boolean {
 export function getRandomHotel(G: IG, ctx: Ctx): Hotel | undefined {
   const undrawnHotels = getHotels(G)
     .allHotels()
-    .filter((h) => !h.drawnByPlayer && !h.hasBeenRemoved);
+    .filter((h) => !h.hasBeenPlaced && !h.drawnByPlayer && !h.hasBeenRemoved);
   if (undrawnHotels.length > 0) {
     return undrawnHotels[Math.floor(ctx.random.Number() * undrawnHotels.length)];
   }
@@ -369,6 +368,7 @@ export function getBonuses(G: IG, chain: Chain): Record<string, number> {
 }
 
 export function awardMoneyToPlayers(G: IG, awards: Record<string, number>) {
+  debugger;
   for (const playerID of Object.keys(awards)) {
     G.players[playerID].money += awards[playerID];
   }

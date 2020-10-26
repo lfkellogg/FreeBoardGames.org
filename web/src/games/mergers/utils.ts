@@ -5,7 +5,7 @@ const STOCK_PER_CHAIN = 25;
 
 export function setupInitialState(numPlayers: number): IG {
   return {
-    hotels: Hotels.buildGrid(4, 4),
+    hotels: Hotels.buildGrid(),
     players: setupPlayers(numPlayers),
     availableStocks: fillStockMap(STOCK_PER_CHAIN),
     lastMove: '',

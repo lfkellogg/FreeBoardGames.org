@@ -75,7 +75,7 @@ export class MergersGameStatus extends React.Component<MergersGameStatusProps, M
 
   renderAvailableStock(chain: Chain) {
     const size = this.props.hotels.sizeOfChain(chain);
-    const stockPrice = this.props.hotels.priceOfStockBySize(chain, size);
+    const stockPrice = Hotels.priceOfStockBySize(chain, size);
     const stockPriceMessage = stockPrice === undefined ? '--' : `$${stockPrice}`;
     const hotelSizeMessage = stockPrice === undefined ? '' : ` (${size})`;
     const elementId = `available-stock-${chain}`;

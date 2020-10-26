@@ -1,8 +1,7 @@
 import { Chain, Hotel } from './types';
 
-const ROW_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
-const DEFAULT_NUM_ROWS = ROW_LETTERS.length;
-const DEFAULT_NUM_COLUMNS = 9;
+const DEFAULT_NUM_ROWS = 9;
+const DEFAULT_NUM_COLUMNS = 12;
 
 export default class Hotels {
   hotels: Hotel[][];
@@ -11,17 +10,21 @@ export default class Hotels {
     this.hotels = hotels;
   }
 
-  static buildGrid(rows: number = DEFAULT_NUM_ROWS, columns: number = DEFAULT_NUM_COLUMNS): Hotel[][] {
-    if (rows > DEFAULT_NUM_ROWS) {
-      throw new Error(`Cannot build hotel grid with more than ${DEFAULT_NUM_ROWS} rows`);
-    }
+  static rowToLetter(r: number): string {
+    return String.fromCharCode('A'.charCodeAt(0) + r);
+  }
 
+  static letterToRow(l: string): number {
+    return l.charCodeAt(0) - 'A'.charCodeAt(0);
+  }
+
+  static buildGrid(rows: number = DEFAULT_NUM_ROWS, columns: number = DEFAULT_NUM_COLUMNS): Hotel[][] {
     const hotels: Hotel[][] = [];
     for (let r = 0; r < rows; r++) {
       hotels.push([]);
       for (let c = 0; c < columns; c++) {
         hotels[r].push({
-          id: `${c + 1}-${ROW_LETTERS[r]}`,
+          id: `${c + 1}-${Hotels.rowToLetter(r)}`,
           hasBeenPlaced: false,
         });
       }
@@ -40,45 +43,45 @@ export default class Hotels {
   topLeftMostHotel(): Hotel {
     // relies on initial sort order
     const list = this.allHotels();
-    list.sort((a, b) => this.getColumn(a) - this.getColumn(b));
-    list.sort((a, b) => this.getRow(a) - this.getRow(b));
+    list.sort((a, b) => Hotels.getColumn(a) - Hotels.getColumn(b));
+    list.sort((a, b) => Hotels.getRow(a) - Hotels.getRow(b));
     return list.find((h) => h.hasBeenPlaced);
   }
 
-  isHotel(hotel: Hotel | string): hotel is Hotel {
+  static isHotel(hotel: Hotel | string): hotel is Hotel {
     if ((hotel as Hotel).id) {
       return true;
     }
     return false;
   }
 
-  getRow(hotel: Hotel | string): number {
-    const id: string = this.isHotel(hotel) ? hotel.id : hotel;
-    return ROW_LETTERS.indexOf(id.split('-')[1]);
+  static getRow(hotel: Hotel | string): number {
+    const id: string = Hotels.isHotel(hotel) ? hotel.id : hotel;
+    return Hotels.letterToRow(id.split('-')[1]);
   }
 
-  getColumn(hotel: Hotel | string): number {
-    const id: string = this.isHotel(hotel) ? hotel.id : hotel;
+  static getColumn(hotel: Hotel | string): number {
+    const id: string = Hotels.isHotel(hotel) ? hotel.id : hotel;
     return Number(id.split('-')[0]) - 1; // -1 because columns are 0-based
   }
 
   getHotel(id: string): Hotel {
-    return this.hotels[this.getRow(id)][this.getColumn(id)];
+    return this.hotels[Hotels.getRow(id)][Hotels.getColumn(id)];
   }
 
   mergeHotel(id: string, hotel: Hotel) {
-    Object.assign(this.hotels[this.getRow(id)][this.getColumn(id)], hotel);
+    Object.assign(this.hotels[Hotels.getRow(id)][Hotels.getColumn(id)], hotel);
   }
 
   adjacentHotels(hotel: Hotel): Hotel[] {
-    const r = this.getRow(hotel);
-    const c = this.getColumn(hotel);
+    const r = Hotels.getRow(hotel);
+    const c = Hotels.getColumn(hotel);
     return this.hotels
       .flat()
       .filter((h) => h.hasBeenPlaced)
       .filter((h) => {
-        const upOrDown = Math.abs(this.getRow(h) - r) === 1 && this.getColumn(h) === c;
-        const leftOrRight = Math.abs(this.getColumn(h) - c) === 1 && this.getRow(h) === r;
+        const upOrDown = Math.abs(Hotels.getRow(h) - r) === 1 && Hotels.getColumn(h) === c;
+        const leftOrRight = Math.abs(Hotels.getColumn(h) - c) === 1 && Hotels.getRow(h) === r;
         return upOrDown || leftOrRight;
       });
   }
@@ -94,10 +97,10 @@ export default class Hotels {
   }
 
   priceOfStock(chain: Chain): number | undefined {
-    return this.priceOfStockBySize(chain, this.sizeOfChain(chain));
+    return Hotels.priceOfStockBySize(chain, this.sizeOfChain(chain));
   }
 
-  priceOfStockBySize(chain: Chain, size: number): number | undefined {
+  static priceOfStockBySize(chain: Chain, size: number): number | undefined {
     if (size === 0) {
       return undefined;
     }
