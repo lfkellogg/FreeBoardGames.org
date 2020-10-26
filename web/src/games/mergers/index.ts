@@ -8,7 +8,7 @@ export const mergersGameDef: IGameDef = {
   name: 'Mergers',
   imageURL: Thumbnail,
   modes: [{ mode: GameMode.OnlineFriend }],
-  minPlayers: 2, // TODO: implement 2 player mode
+  minPlayers: 3,
   maxPlayers: 6,
   description: 'Similar to Acquire',
   descriptionTag: `Build hotel chains and dominate the market!`,
