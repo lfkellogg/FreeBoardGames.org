@@ -17,7 +17,7 @@ export function getHotels(G: IG): Hotels {
 // TODO: this appears to be broken in the case where the player has no playable tiles
 export function placeHotel(G: IG, ctx: Ctx, id?: string) {
   const hotels = getHotels(G);
-  if (id === undefined) {
+  if (!id) {
     if (!!hotels.playerHotels(ctx.playerID).find((h) => !hotels.isUnplayable(h))) {
       return INVALID_MOVE;
     }
@@ -212,7 +212,6 @@ export function chooseChainToMerge(G: IG, ctx, chain: Chain) {
   }
 
   G.merger.chainToMerge = chain;
-  G.merger.chainSize = hotels.sizeOfChain(chain);
 
   // move the chain to the front of the array
   G.merger.mergingChains.splice(G.merger.mergingChains.indexOf(chain), 1);
@@ -221,6 +220,7 @@ export function chooseChainToMerge(G: IG, ctx, chain: Chain) {
 }
 
 export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) {
+  debugger;
   const { chainToMerge, survivingChain } = G.merger;
   const player = G.players[ctx.playerID];
   const originalStockCount = player.stocks[chainToMerge];
@@ -248,7 +248,7 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
   G.availableStocks[survivingChain] -= toSwap / 2;
 
   let toSell = sell || 0;
-  toSell = Math.min(toSell, player.stocks[chainToMerge]);
+  toSell = Math.min(toSell, player.stocks[chainToMerge] || 0);
 
   // players sells stocks
   if (toSell > 0) {
@@ -402,14 +402,12 @@ export function autosetChainToMerge(G: IG) {
   }
   if (G.merger.mergingChains.length === 1) {
     G.merger.chainToMerge = G.merger.mergingChains[0];
-    G.merger.chainSize = hotels.sizeOfChain(G.merger.chainToMerge);
     return;
   }
   const firstChainSize = hotels.sizeOfChain(G.merger.mergingChains[0]);
   const secondChainSize = hotels.sizeOfChain(G.merger.mergingChains[1]);
   if (firstChainSize !== secondChainSize) {
     G.merger.chainToMerge = G.merger.mergingChains[0];
-    G.merger.chainSize = hotels.sizeOfChain(G.merger.chainToMerge);
   }
 }
 
@@ -464,8 +462,11 @@ export function getMergerResults(G: IG, chainToMerge: Chain): Merger {
   }
 
   const bonuses = getBonuses(G, chainToMerge);
+  const chainSize = getHotels(G).sizeOfChain(chainToMerge);
+
   return {
     chainToMerge,
+    chainSize,
     stockCounts,
     swapAndSells,
     bonuses,

@@ -8,10 +8,11 @@ import {
   chooseSurvivingChain,
   declareGameOver,
   drawHotels,
+  firstBuildTurn,
   mergerPhaseNextTurn,
   placeHotel,
 } from './game';
-import { fillInTestHotels, getMultiplayerTestClients, getSingleTestClient } from './test_utils';
+import { fillInTestHotels, getMultiplayerTestClients, getScenario, getSingleTestClient } from './test_utils';
 import { Chain, Hotel, IG, Player } from './types';
 import { fillStockMap } from './utils';
 
@@ -811,9 +812,6 @@ describe('drawHotels', () => {
   });
 });
 
-// TODO:
-//   - merger where no one has any stock
-//   - merger where the person who merged has no stock
 describe('mergerPhase', () => {
   describe('a 3-way merger', () => {
     let p0;
@@ -841,12 +839,14 @@ describe('mergerPhase', () => {
         ],
       ];
 
-      const clients = getMultiplayerTestClients(2, originalBoard, (G) => {
+      const scenario = getScenario({ hotels: originalBoard }, (G) => {
         G.players['0'].stocks[Chain.Tower] = 1;
         G.players['0'].stocks[Chain.Continental] = 2;
         G.players['1'].stocks[Chain.American] = 1;
         G.players['1'].stocks[Chain.Continental] = 1;
       });
+
+      const clients = getMultiplayerTestClients(2, scenario);
 
       p0 = clients[0];
       p1 = clients[1];
@@ -947,9 +947,11 @@ describe('mergerPhase', () => {
         ],
       ];
 
-      const clients = getMultiplayerTestClients(2, originalBoard, (G) => {
+      const scenario = getScenario({ hotels: originalBoard }, (G) => {
         G.players['1'].stocks[Chain.Tower] = 1;
       });
+
+      const clients = getMultiplayerTestClients(2, scenario);
 
       p0 = clients[0];
       p1 = clients[1];
@@ -1002,6 +1004,215 @@ describe('mergerPhase', () => {
         ],
       ];
       expect(p0.store.getState().G.hotels).toEqual(expectedBoard);
+    });
+  });
+});
+
+describe('mergers', () => {
+  let p0;
+  let p1;
+  let p2;
+
+  beforeEach(() => {
+    // prevent hotel selection by assigning all tiles up front
+    const hotels = [
+      //        A                        A                     A                        A
+      [{ drawnByPlayer: '0' }, { drawnByPlayer: '0' }, { drawnByPlayer: '0' }, { drawnByPlayer: '0' }],
+      //        A                        A                     A                        A
+      [{ drawnByPlayer: '0' }, { drawnByPlayer: '2' }, { drawnByPlayer: '1' }, { drawnByPlayer: '1' }],
+      //        A                        A                                              A
+      [{ drawnByPlayer: '2' }, { drawnByPlayer: '2' }, { drawnByPlayer: '2' }, { drawnByPlayer: '1' }],
+      //        A                        A                     A                        A
+      [{ drawnByPlayer: '2' }, { drawnByPlayer: '2' }, { drawnByPlayer: '1' }, { drawnByPlayer: '1' }],
+    ];
+    // TODO: refactor this first turn stuff
+    const clients = getMultiplayerTestClients(
+      3,
+      getScenario(
+        { hotels },
+        () => {},
+        (G, ctx) => {
+          if (G.lastPlacedHotel) {
+            return firstBuildTurn(G, ctx);
+          } else {
+            return 0;
+          }
+        },
+      ),
+    );
+
+    p0 = clients[0];
+    p1 = clients[1];
+    p2 = clients[2];
+  });
+
+  it('correctly plays out an entire game', () => {
+    p0.moves.placeHotel('1-A');
+    p0.moves.buyStock();
+    p0.moves.drawHotels();
+
+    p1.moves.placeHotel('4-B');
+    p1.moves.buyStock();
+    p1.moves.drawHotels();
+
+    p2.moves.placeHotel('1-D');
+    p2.moves.buyStock();
+    p2.moves.drawHotels();
+
+    p0.moves.placeHotel('2-A');
+    p0.moves.chooseNewChain(Chain.Tower);
+    p0.moves.buyStock({ [Chain.Tower]: 3 });
+    p0.moves.drawHotels();
+    expect(p0.store.getState().G.players['0'].money).toEqual(5400);
+    expect(p0.store.getState().G.players['0'].stocks[Chain.Tower]).toEqual(4);
+    expect(p0.store.getState().G.availableStocks[Chain.Tower]).toEqual(21);
+
+    p1.moves.placeHotel('3-B');
+    p1.moves.chooseNewChain(Chain.American);
+    p1.moves.buyStock({ [Chain.American]: 3 });
+    p1.moves.drawHotels();
+    expect(p0.store.getState().G.players['1'].money).toEqual(5100);
+    expect(p0.store.getState().G.players['1'].stocks[Chain.American]).toEqual(4);
+    expect(p0.store.getState().G.availableStocks[Chain.American]).toEqual(21);
+
+    p2.moves.placeHotel('1-C');
+    p2.moves.chooseNewChain(Chain.Continental);
+    p2.moves.buyStock({ [Chain.Continental]: 3 });
+    p2.moves.drawHotels();
+    expect(p0.store.getState().G.players['2'].money).toEqual(4800);
+    expect(p0.store.getState().G.players['2'].stocks[Chain.Continental]).toEqual(4);
+    expect(p0.store.getState().G.availableStocks[Chain.Continental]).toEqual(21);
+
+    p0.moves.placeHotel('3-A');
+    p0.moves.chooseSurvivingChain(Chain.American);
+    p0.moves.swapAndSellStock(2, 1);
+    p0.moves.buyStock({ [Chain.American]: 3 });
+    p0.moves.drawHotels();
+    expect(p0.store.getState().G.players['0'].money).toEqual(6800);
+    expect(p0.store.getState().G.players['0'].stocks[Chain.Tower]).toEqual(1);
+    expect(p0.store.getState().G.players['0'].stocks[Chain.American]).toEqual(4);
+    expect(p0.store.getState().G.availableStocks[Chain.Tower]).toEqual(24);
+    expect(p0.store.getState().G.availableStocks[Chain.American]).toEqual(17);
+
+    p1.moves.placeHotel('4-D');
+    p1.moves.buyStock({ [Chain.Continental]: 1, [Chain.American]: 2 });
+    p1.moves.drawHotels();
+    expect(p0.store.getState().G.players['1'].money).toEqual(3500);
+    expect(p0.store.getState().G.players['1'].stocks[Chain.American]).toEqual(6);
+    expect(p0.store.getState().G.players['1'].stocks[Chain.Continental]).toEqual(1);
+    expect(p0.store.getState().G.availableStocks[Chain.American]).toEqual(15);
+    expect(p0.store.getState().G.availableStocks[Chain.Continental]).toEqual(20);
+
+    p2.moves.placeHotel('2-C');
+    p2.moves.buyStock({ [Chain.Continental]: 3 });
+    p2.moves.drawHotels();
+    expect(p0.store.getState().G.players['2'].money).toEqual(3300);
+    expect(p0.store.getState().G.players['2'].stocks[Chain.Continental]).toEqual(7);
+    expect(p0.store.getState().G.availableStocks[Chain.Continental]).toEqual(17);
+
+    p0.moves.placeHotel('4-A');
+    p0.moves.buyStock({ [Chain.American]: 3 });
+    p0.moves.drawHotels();
+    expect(p0.store.getState().G.players['0'].money).toEqual(4700);
+    expect(p0.store.getState().G.players['0'].stocks[Chain.Tower]).toEqual(1);
+    expect(p0.store.getState().G.players['0'].stocks[Chain.American]).toEqual(7);
+    expect(p0.store.getState().G.availableStocks[Chain.Tower]).toEqual(24);
+    expect(p0.store.getState().G.availableStocks[Chain.American]).toEqual(12);
+
+    p1.moves.placeHotel('3-D');
+    p1.moves.chooseNewChain(Chain.Tower);
+    p1.moves.buyStock({ [Chain.Tower]: 1, [Chain.American]: 2 });
+    p1.moves.drawHotels();
+    expect(p0.store.getState().G.players['1'].money).toEqual(1900);
+    expect(p0.store.getState().G.players['1'].stocks[Chain.American]).toEqual(8);
+    expect(p0.store.getState().G.players['1'].stocks[Chain.Continental]).toEqual(1);
+    expect(p0.store.getState().G.players['1'].stocks[Chain.Tower]).toEqual(2);
+    expect(p0.store.getState().G.availableStocks[Chain.American]).toEqual(10);
+    expect(p0.store.getState().G.availableStocks[Chain.Continental]).toEqual(17);
+    expect(p0.store.getState().G.availableStocks[Chain.Tower]).toEqual(22);
+
+    p2.moves.placeHotel('2-B');
+    expect(p0.store.getState().G.players['1'].money).toEqual(4400);
+    expect(p0.store.getState().G.players['2'].money).toEqual(8300);
+    p2.moves.swapAndSellStock(6, 1);
+    expect(p0.store.getState().G.players['2'].money).toEqual(8800);
+    expect(p0.store.getState().G.players['2'].stocks[Chain.Continental]).toEqual(0);
+    expect(p0.store.getState().G.players['2'].stocks[Chain.American]).toEqual(3);
+    p1.moves.swapAndSellStock(0, 1);
+    expect(p0.store.getState().G.players['1'].money).toEqual(4900);
+    expect(p0.store.getState().G.players['1'].stocks[Chain.Continental]).toEqual(0);
+    p2.moves.buyStock({ [Chain.American]: 3 });
+    p2.moves.drawHotels();
+    expect(p0.store.getState().G.players['2'].money).toEqual(6700);
+    expect(p0.store.getState().G.players['2'].stocks[Chain.American]).toEqual(6);
+    expect(p0.store.getState().G.availableStocks[Chain.American]).toEqual(4);
+
+    p0.moves.placeHotel('1-B');
+    p0.moves.buyStock({ [Chain.American]: 3 });
+    p0.moves.drawHotels();
+    expect(p0.store.getState().G.players['0'].money).toEqual(2300);
+    expect(p0.store.getState().G.players['0'].stocks[Chain.Tower]).toEqual(1);
+    expect(p0.store.getState().G.players['0'].stocks[Chain.American]).toEqual(10);
+    expect(p0.store.getState().G.availableStocks[Chain.Tower]).toEqual(22);
+    expect(p0.store.getState().G.availableStocks[Chain.American]).toEqual(1);
+
+    p1.moves.placeHotel('4-C');
+    expect(p0.store.getState().G.players['0'].money).toEqual(3300);
+    expect(p0.store.getState().G.players['1'].money).toEqual(6900);
+    p1.moves.swapAndSellStock(2);
+    expect(p0.store.getState().G.players['1'].money).toEqual(6900);
+    expect(p0.store.getState().G.players['1'].stocks[Chain.Tower]).toEqual(0);
+    expect(p0.store.getState().G.players['1'].stocks[Chain.American]).toEqual(9);
+    expect(p0.store.getState().G.availableStocks[Chain.American]).toEqual(0);
+    p0.moves.swapAndSellStock(0, 1);
+    expect(p0.store.getState().G.players['0'].money).toEqual(3500);
+    expect(p0.store.getState().G.players['0'].stocks[Chain.Tower]).toEqual(0);
+    expect(p0.store.getState().G.availableStocks[Chain.Tower]).toEqual(25);
+    p1.moves.buyStock();
+    p1.moves.declareGameOver(false);
+    p1.moves.drawHotels();
+    expect(p0.store.getState().G.players['0'].stocks[Chain.American]).toEqual(10);
+
+    p2.moves.placeHotel('2-D');
+    p2.moves.buyStock();
+    p2.moves.declareGameOver(true);
+
+    // 8000 bonus + 10 * 800 = 16000
+    expect(p0.store.getState().G.players['0'].money).toEqual(19500);
+    // 4000 bonus + 9 * 800 = 11200
+    expect(p0.store.getState().G.players['1'].money).toEqual(18100);
+    // 6 * 800 = 4800
+    expect(p0.store.getState().G.players['2'].money).toEqual(11500);
+
+    expect(p0.store.getState().ctx.gameover).toEqual({
+      declaredBy: '2',
+      winner: '0',
+      scores: [
+        {
+          id: '0',
+          money: 19500,
+          winner: true,
+        },
+        {
+          id: '1',
+          money: 18100,
+          winner: false,
+        },
+        {
+          id: '2',
+          money: 11500,
+          winner: false,
+        },
+      ],
+      finalMergers: [
+        {
+          chainToMerge: Chain.American,
+          chainSize: 15,
+          stockCounts: { '0': 10, '1': 9, '2': 6 },
+          bonuses: { '0': 8000, '1': 4000 },
+          swapAndSells: {},
+        },
+      ],
     });
   });
 });

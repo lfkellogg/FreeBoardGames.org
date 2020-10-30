@@ -1,9 +1,9 @@
-import { Ctx } from 'boardgame.io';
+import { Ctx, Game } from 'boardgame.io';
 import { Client } from 'boardgame.io/client';
 import { Local } from 'boardgame.io/multiplayer';
 import { MergersGame } from './game';
 import { Hotels } from './hotels';
-import { Hotel } from './types';
+import { Hotel, IG } from './types';
 import { setupInitialState } from './utils';
 
 export interface MergersScenarioConfig {
@@ -35,7 +35,7 @@ export function fillInTestHotels(hotels: Hotel[][]): Hotel[][] {
  * Get a custom Mergers scenario, without the random drawing up front, and where player 0 always
  * goes first.
  */
-export function getScenario(config?: MergersScenarioConfig, setupFn?: (G, ctx) => void) {
+export function getScenario(config?: MergersScenarioConfig, setupFn?: (G, ctx) => void, firstFn?: (G, ctx) => number) {
   const phase = config?.phase || 'buildingPhase';
 
   const MergersCustomScenario = {
@@ -43,6 +43,7 @@ export function getScenario(config?: MergersScenarioConfig, setupFn?: (G, ctx) =
     setup: (ctx: Ctx) => {
       const G = setupInitialState(ctx.numPlayers);
       G.hotels = config.hotels || Hotels.buildGrid(4, 4);
+      fillInTestHotels(G.hotels);
       ctx.events.setPhase(phase);
       if (config?.stage) {
         ctx.events.setActivePlayers({ '0': config.stage });
@@ -54,8 +55,7 @@ export function getScenario(config?: MergersScenarioConfig, setupFn?: (G, ctx) =
     },
   };
 
-  // skip the initial draw and always set player 0 to go first
-  MergersCustomScenario.phases[phase].turn.order.first = () => 0;
+  MergersCustomScenario.phases[phase].turn.order.first = firstFn || (() => 0);
 
   return MergersCustomScenario;
 }
@@ -73,9 +73,9 @@ export function getSingleTestClient(numPlayers: number = 2, hotels?: Hotel[][], 
 }
 
 /** Get clients for a multiplayer test, and start them, with an optional setup function */
-export function getMultiplayerTestClients(numPlayers: number = 2, hotels?: Hotel[][], setupFn?: (G, ctx) => void) {
+export function getMultiplayerTestClients(numPlayers: number = 2, scenario: Game<IG>) {
   const spec = {
-    game: getScenario({ hotels }, setupFn),
+    game: scenario,
     multiplayer: Local(),
     numPlayers,
   };
