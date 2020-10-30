@@ -3,7 +3,7 @@ import { Chain, Hotel } from './types';
 const DEFAULT_NUM_ROWS = 9;
 const DEFAULT_NUM_COLUMNS = 12;
 
-export default class Hotels {
+export class Hotels {
   hotels: Hotel[][];
 
   constructor(hotels: Hotel[][]) {

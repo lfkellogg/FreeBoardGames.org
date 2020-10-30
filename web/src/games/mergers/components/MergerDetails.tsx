@@ -24,7 +24,6 @@ export class MergerDetails extends React.Component<MergerDetailsProps> {
 
   render() {
     const { bonuses, chainToMerge, stockCounts } = this.props.merger;
-
     const renderStockCount = (playerID) => {
       return (
         <p className={css.MarginLeft} key={`count-${chainToMerge}-${playerID}`}>

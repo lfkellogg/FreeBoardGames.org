@@ -1,15 +1,16 @@
 import React from 'react';
 import Enzyme, { ReactWrapper } from 'enzyme';
 import Adapter from 'enzyme-adapter-react-16';
-import { State } from 'boardgame.io';
 import { Client } from 'boardgame.io/client';
 import { GameMode } from 'gamesShared/definitions/mode';
 import { MergersGame } from './game';
 
 import { Board, BoardProps, BoardState } from './board';
-import { Chain } from './types';
+import { Chain, IG } from './types';
+import { getScenario } from './test_utils';
+import { Hotels } from './hotels';
 
-type SetUpStateFn = (state: State) => void;
+type SetUpStateFn = (G, ctx) => void;
 
 interface TestConfig {
   phase?: string;
@@ -18,7 +19,7 @@ interface TestConfig {
 
 Enzyme.configure({ adapter: new Adapter() });
 
-let client: Client;
+let client;
 
 class TestBoard extends Board {
   render() {
@@ -46,27 +47,13 @@ const setUpComponent = (
   setUpStateFn?: SetUpStateFn,
 ): ReactWrapper<BoardProps, BoardState, Board> => {
   client = Client({
-    game: MergersGame,
+    game: config || setUpStateFn ? getScenario(config, setUpStateFn) : MergersGame,
     numPlayers: 3,
-    playerId: '0',
+    playerID: '0',
   });
   client.moves.buyStock = jest.fn();
 
   const state0 = client.store.getState();
-
-  // force it to be playerO's turn
-  state0.ctx.playOrderPos = 0;
-  state0.ctx.currentPlayer = '0';
-
-  if (config?.phase) {
-    state0.ctx.phase = config.phase;
-  }
-  if (config?.stage) {
-    state0.ctx.activePlayers = { '0': config.stage };
-  }
-  if (setUpStateFn) {
-    setUpStateFn(state0);
-  }
 
   return Enzyme.mount(<TestBoard G={state0.G} ctx={state0.ctx} moves={client.moves} playerID="0" />);
 };
@@ -74,7 +61,11 @@ const setUpComponent = (
 // TODO: add more tests
 describe('Board', () => {
   describe('on game start', () => {
-    const comp = setUpComponent();
+    let comp: ReactWrapper<BoardProps, BoardState, Board>;
+
+    beforeEach(() => {
+      comp = setUpComponent();
+    });
 
     it('renders all players', () => {
       expect(comp.find('#player-label-0').at(0).text()).toContain('player0');
@@ -109,14 +100,21 @@ describe('Board', () => {
     let comp: ReactWrapper<BoardProps, BoardState, Board>;
 
     beforeEach(() => {
-      comp = setUpComponent({ phase: 'mergerPhase' }, (state) => {
-        state.G.merger = {
+      comp = setUpComponent({ phase: 'mergerPhase' }, (G: IG) => {
+        G.merger = {
           survivingChain: Chain.Continental,
           chainToMerge: Chain.Tower,
-          chainSize: 3,
-          stockCounts: { '0': 10, '1': 5 },
-          bonuses: { '0': 3000, '1': 1500 },
+          mergingChains: [Chain.Tower],
         };
+
+        // make Tower a chain of size 3
+        const hotels = new Hotels(G.hotels);
+        hotels.getHotel('1-A').chain = Chain.Tower;
+        hotels.getHotel('2-A').chain = Chain.Tower;
+        hotels.getHotel('3-A').chain = Chain.Tower;
+
+        G.players['0'].stocks[Chain.Tower] = 10;
+        G.players['1'].stocks[Chain.Tower] = 5;
       });
     });
 
@@ -124,6 +122,7 @@ describe('Board', () => {
       expect(comp.find('#merger-details-dialog').length).toBeGreaterThan(0);
     });
 
+    // TODO: move this to a specific test for merger details
     it('displays merger details', () => {
       expect(comp.find('#bonus-Tower-0').first().text()).toContain('player0 gets $3000');
       expect(comp.find('#bonus-Tower-1').first().text()).toContain('player1 gets $1500');

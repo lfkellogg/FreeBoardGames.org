@@ -10,7 +10,7 @@ import { IG, Merger, Score } from './types';
 import { PlayerActions } from './components/PlayerActions';
 import { MergerDetails } from './components/MergerDetails';
 import { MergersDialog } from './components/MergersDialog';
-import Hotels from './hotels';
+import { Hotels } from './hotels';
 import { MergersGameStatus } from './components/MergersGameStatus';
 
 export interface BoardProps {

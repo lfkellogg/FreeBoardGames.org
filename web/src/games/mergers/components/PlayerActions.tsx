@@ -6,7 +6,7 @@ import { fillStockMap } from '../utils';
 
 import { StockLabel } from './StockLabel';
 import css from './PlayerActions.css';
-import Hotels from '../hotels';
+import { Hotels } from '../hotels';
 
 interface PlayerActionsProps {
   hotels?: Hotels;
@@ -117,7 +117,7 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
       .find((h) => !this.props.hotels.isUnplayable(h));
     if (!hasPlayableHotel) {
       const label = 'Continue (you have no playable hotels)';
-      return this.renderButton(label, this.props.moves.placeHotel);
+      return this.renderButton(label, () => this.props.moves.placeHotel());
     } else {
       return <div>Click an outlined square above to place hotel</div>;
     }

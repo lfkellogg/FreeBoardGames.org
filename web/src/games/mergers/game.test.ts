@@ -1,7 +1,5 @@
 import { Ctx } from 'boardgame.io';
-import { Client } from 'boardgame.io/client';
 import { INVALID_MOVE } from 'boardgame.io/core';
-import { Local } from 'boardgame.io/multiplayer';
 import {
   autosetChainToMerge,
   awardBonuses,
@@ -11,15 +9,15 @@ import {
   declareGameOver,
   drawHotels,
   mergerPhaseNextTurn,
-  MergersGame,
   placeHotel,
 } from './game';
-import Hotels from './hotels';
+import { fillInTestHotels, getMultiplayerTestClients, getSingleTestClient } from './test_utils';
 import { Chain, Hotel, IG, Player } from './types';
-import { fillStockMap, setupPlayers } from './utils';
+import { fillStockMap } from './utils';
 
 // TODO:
 // - test endgame
+// - integration test that starts a game, makes mergers, maybe ends the game
 
 const DEFAULT_CTX: Ctx = {
   numPlayers: 2,
@@ -32,73 +30,8 @@ const DEFAULT_CTX: Ctx = {
   phase: 'buildingPhase',
 };
 
-function fillInTestHotels(hotels: Hotel[][]): Hotel[][] {
-  for (let r = 0; r < hotels.length; r++) {
-    for (let c = 0; c < hotels[r].length; c++) {
-      const hotel = hotels[r][c];
-      hotel.id = `${c + 1}-${Hotels.rowToLetter(r)}`;
-      if (hotel.chain) {
-        hotel.hasBeenPlaced = true;
-      }
-    }
-  }
-  return hotels;
-}
-
-// TODO: clean this up to use more of the normal game setup
-function getScenario(hotels?: Hotel[][]) {
-  const MergersCustomScenario = {
-    ...MergersGame,
-    setup: (ctx: Ctx) => {
-      const G: IG = {
-        hotels: hotels || Hotels.buildGrid(3, 3),
-        players: setupPlayers(ctx.numPlayers),
-        availableStocks: fillStockMap(25),
-      };
-
-      ctx.events.setPhase('buildingPhase');
-
-      return G;
-    },
-  };
-
-  // skip the initial draw and set player 0 to go first
-  MergersCustomScenario.phases.buildingPhase.turn.order.first = () => 0;
-
-  return MergersCustomScenario;
-}
-
-function getSingleTestClient(numPlayers: number = 2, hotels?: Hotel[][]): Client {
-  const client = Client({
-    game: getScenario(hotels),
-    numPlayers,
-  });
-
-  return client;
-}
-
-function getAllTestClients(numPlayers: number = 2, hotels?: Hotel[][]): Client[] {
-  const spec = {
-    game: getScenario(hotels),
-    multiplayer: Local(),
-    numPlayers,
-  };
-
-  const clients = [];
-  for (let i = 0; i < numPlayers; i++) {
-    clients.push(
-      Client({
-        ...spec,
-        playerID: `${i}`,
-      }),
-    );
-  }
-
-  return clients;
-}
-
 describe('placeHotel', () => {
-  let client: Client;
+  let client;
   let originalBoard: Hotel[][];
 
   beforeEach(() => {
@@ -344,7 +277,7 @@ describe('buyStock', () => {
 });
 
 describe('chooseNewChain', () => {
-  let client: Client;
+  let client;
   let originalBoard: Hotel[][];
 
   beforeEach(() => {
@@ -883,8 +816,8 @@ describe('drawHotels', () => {
 //   - merger where the person who merged has no stock
 describe('mergerPhase', () => {
   describe('a 3-way merger', () => {
-    let p0: Client;
-    let p1: Client;
+    let p0;
+    let p1;
     let G: IG;
     let originalBoard: Hotel[][];
     beforeEach(() => {
@@ -908,20 +841,16 @@ describe('mergerPhase', () => {
           { id: '4-C' },
         ],
       ];
-      const clients = getAllTestClients(2, originalBoard);
+
+      const clients = getMultiplayerTestClients(2, originalBoard, (G, ctx) => {
+        G.players['0'].stocks[Chain.Tower] = 1;
+        G.players['0'].stocks[Chain.Continental] = 2;
+        G.players['1'].stocks[Chain.American] = 1;
+        G.players['1'].stocks[Chain.Continental] = 1;
+      });
+
       p0 = clients[0];
       p1 = clients[1];
-
-      p0.start();
-      p1.start();
-
-      G = p0.store.getState().G;
-
-      G.players['0'].stocks[Chain.Tower] = 1;
-      G.players['0'].stocks[Chain.Continental] = 2;
-
-      G.players['1'].stocks[Chain.American] = 1;
-      G.players['1'].stocks[Chain.Continental] = 1;
     });
 
     it('completes the merger process twice', () => {
@@ -1001,8 +930,8 @@ describe('mergerPhase', () => {
   });
 
   describe('when the merging player does not have stock in the chain', () => {
-    let p0: Client;
-    let p1: Client;
+    let p0;
+    let p1;
     let G: IG;
     let originalBoard: Hotel[][];
     beforeEach(() => {
@@ -1019,15 +948,13 @@ describe('mergerPhase', () => {
           { id: '3-C' },
         ],
       ];
-      const clients = getAllTestClients(2, originalBoard);
+
+      const clients = getMultiplayerTestClients(2, originalBoard, (G, ctx) => {
+        G.players['1'].stocks[Chain.Tower] = 1;
+      });
+
       p0 = clients[0];
       p1 = clients[1];
-
-      p0.start();
-      p1.start();
-
-      G = p0.store.getState().G;
-      G.players['1'].stocks[Chain.Tower] = 1;
     });
 
     it('skips to the player with stock', () => {

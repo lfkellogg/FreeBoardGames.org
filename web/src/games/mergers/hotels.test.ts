@@ -1,5 +1,5 @@
 import { Chain } from './types';
-import Hotels from './hotels';
+import { Hotels } from './hotels';
 
 const UNMERGEABLE_SIZE_OF_ONE = 0;
 

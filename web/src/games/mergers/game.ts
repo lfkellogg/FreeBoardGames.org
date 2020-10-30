@@ -8,15 +8,16 @@ import {
   roundDownToNearest2,
   setupInitialState,
 } from './utils';
-import Hotels from './hotels';
+import { Hotels } from './hotels';
 
 export function getHotels(G: IG): Hotels {
   return new Hotels(G.hotels);
 }
 
+// TODO: this appears to be broken in the case where the player has no playable tiles
 export function placeHotel(G: IG, ctx: Ctx, id?: string) {
   const hotels = getHotels(G);
-  if (!id) {
+  if (id === undefined) {
     if (!!hotels.playerHotels(ctx.playerID).find((h) => !hotels.isUnplayable(h))) {
       return INVALID_MOVE;
     }
@@ -146,7 +147,6 @@ export function drawHotels(G: IG, ctx: Ctx) {
   // first, find and remove any of this player's unplayable tiles
   const player: Player = G.players[ctx.playerID];
   const hotels = getHotels(G);
-  debugger;
   hotels
     .playerHotels(player.id)
     .filter((h) => hotels.isPermanentlyUnplayable(h))
@@ -189,7 +189,6 @@ export function firstBuildTurn(G: IG, ctx: Ctx): number {
   } else {
     // otherwise choose first player based on initial hotel placement
     const topLeftMostHotel = hotels.topLeftMostHotel();
-    G.lastMove = `Player ${topLeftMostHotel.drawnByPlayer} draws ${topLeftMostHotel.id} and will go first`;
     return ctx.playOrder.indexOf(topLeftMostHotel.drawnByPlayer);
   }
 }
@@ -368,7 +367,6 @@ export function getBonuses(G: IG, chain: Chain): Record<string, number> {
 }
 
 export function awardMoneyToPlayers(G: IG, awards: Record<string, number>) {
-  debugger;
   for (const playerID of Object.keys(awards)) {
     G.players[playerID].money += awards[playerID];
   }
@@ -392,6 +390,9 @@ export function setupInitialDrawing(G: IG, ctx: Ctx) {
       assignRandomHotel(G, ctx, player);
     }
   }
+
+  const topLeftMostHotel = hotels.topLeftMostHotel();
+  G.lastMove = `Player ${topLeftMostHotel.drawnByPlayer} draws ${topLeftMostHotel.id} and will go first`;
 }
 
 export function autosetChainToMerge(G: IG) {

@@ -4,7 +4,7 @@ import ClearIcon from '@material-ui/icons/Clear';
 
 import { Chain, Hotel } from '../types';
 import css from './HotelGrid.css';
-import Hotels from '../hotels';
+import { Hotels } from '../hotels';
 
 interface HotelGridProps {
   hotels: Hotels;

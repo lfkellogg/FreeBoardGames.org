@@ -1,4 +1,4 @@
-import Hotels from './hotels';
+import { Hotels } from './hotels';
 import { Chain, IG, Player } from './types';
 
 const STOCK_PER_CHAIN = 25;
