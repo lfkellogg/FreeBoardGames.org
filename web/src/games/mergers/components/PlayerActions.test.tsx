@@ -51,7 +51,7 @@ describe('#renderBuyStock', () => {
 
   describe('trying to buy zero stocks, even with no money', () => {
     beforeEach(() => {
-      setUpComponent({phase: 'buildingPhase', stage: 'buyStockStage'}, (G) => {
+      setUpComponent({ phase: 'buildingPhase', stage: 'buyStockStage' }, (G) => {
         const hotels = new Hotels(G.hotels);
         hotels.mergeHotel('1-A', { chain: Chain.Tower });
         hotels.mergeHotel('2-A', { chain: Chain.Tower });
@@ -73,7 +73,7 @@ describe('#renderBuyStock', () => {
 
   describe('trying to buy 3 stocks with exactly the right amount of money left', () => {
     beforeEach(() => {
-      setUpComponent({phase: 'buildingPhase', stage: 'buyStockStage'}, (G) => {
+      setUpComponent({ phase: 'buildingPhase', stage: 'buyStockStage' }, (G) => {
         // hotels are all from the cheapest tier and of size 2 = $200 per stock
         setUpHotel(G, '1-A', Chain.Tower);
         setUpHotel(G, '2-A', Chain.Tower);
@@ -109,7 +109,7 @@ describe('#renderBuyStock', () => {
 
   describe('trying to buy stock with not enough money left', () => {
     beforeEach(() => {
-      setUpComponent({phase: 'buildingPhase', stage: 'buyStockStage'}, (G) => {
+      setUpComponent({ phase: 'buildingPhase', stage: 'buyStockStage' }, (G) => {
         // hotels are all from the cheapest tier and of size 2 = $200 per stock
         setUpHotel(G, '1-A', Chain.Tower);
         setUpHotel(G, '2-A', Chain.Tower);
@@ -141,7 +141,7 @@ describe('#renderBuyStock', () => {
 
   describe('trying to buy more of a stock than is available', () => {
     beforeEach(() => {
-      setUpComponent({phase: 'buildingPhase', stage: 'buyStockStage'}, (G) => {
+      setUpComponent({ phase: 'buildingPhase', stage: 'buyStockStage' }, (G) => {
         setUpHotel(G, '1-A', Chain.Tower);
         setUpHotel(G, '2-A', Chain.Tower);
         setUpHotel(G, '3-B', Chain.Luxor);
@@ -169,7 +169,7 @@ describe('#renderBuyStock', () => {
 
   describe('trying to buy more than 3 stocks', () => {
     beforeEach(() => {
-      setUpComponent({phase: 'buildingPhase', stage: 'buyStockStage'}, (G) => {
+      setUpComponent({ phase: 'buildingPhase', stage: 'buyStockStage' }, (G) => {
         setUpHotel(G, '1-A', Chain.Tower);
         setUpHotel(G, '2-A', Chain.Tower);
         setUpHotel(G, '3-B', Chain.Luxor);
@@ -198,7 +198,7 @@ describe('#renderBuyStock', () => {
 
   describe('entering a value that is not a number', () => {
     beforeEach(() => {
-      setUpComponent({phase: 'buildingPhase', stage: 'buyStockStage'}, (G) => {
+      setUpComponent({ phase: 'buildingPhase', stage: 'buyStockStage' }, (G) => {
         setUpHotel(G, '1-A', Chain.Tower);
         setUpHotel(G, '2-A', Chain.Tower);
         setUpHotel(G, '3-B', Chain.Luxor);

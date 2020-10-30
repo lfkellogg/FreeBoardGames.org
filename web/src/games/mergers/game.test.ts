@@ -818,7 +818,6 @@ describe('mergerPhase', () => {
   describe('a 3-way merger', () => {
     let p0;
     let p1;
-    let G: IG;
     let originalBoard: Hotel[][];
     beforeEach(() => {
       originalBoard = [
@@ -842,7 +841,7 @@ describe('mergerPhase', () => {
         ],
       ];
 
-      const clients = getMultiplayerTestClients(2, originalBoard, (G, ctx) => {
+      const clients = getMultiplayerTestClients(2, originalBoard, (G) => {
         G.players['0'].stocks[Chain.Tower] = 1;
         G.players['0'].stocks[Chain.Continental] = 2;
         G.players['1'].stocks[Chain.American] = 1;
@@ -932,7 +931,6 @@ describe('mergerPhase', () => {
   describe('when the merging player does not have stock in the chain', () => {
     let p0;
     let p1;
-    let G: IG;
     let originalBoard: Hotel[][];
     beforeEach(() => {
       originalBoard = [
@@ -949,7 +947,7 @@ describe('mergerPhase', () => {
         ],
       ];
 
-      const clients = getMultiplayerTestClients(2, originalBoard, (G, ctx) => {
+      const clients = getMultiplayerTestClients(2, originalBoard, (G) => {
         G.players['1'].stocks[Chain.Tower] = 1;
       });
 

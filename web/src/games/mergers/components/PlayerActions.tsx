@@ -98,7 +98,7 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
       return 'You  may only buy up to 3 stocks per turn';
     }
     if (totalPrice > this.playerState().money) {
-      return 'You don\'t have enough money';
+      return "You don't have enough money";
     }
     return '';
   }

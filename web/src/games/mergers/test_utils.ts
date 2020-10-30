@@ -1,20 +1,20 @@
-import { Ctx } from "boardgame.io";
+import { Ctx } from 'boardgame.io';
 import { Client } from 'boardgame.io/client';
-import { Local } from "boardgame.io/multiplayer";
-import { MergersGame } from "./game";
-import { Hotels } from "./hotels";
-import { Hotel } from "./types";
-import { setupInitialState } from "./utils";
+import { Local } from 'boardgame.io/multiplayer';
+import { MergersGame } from './game';
+import { Hotels } from './hotels';
+import { Hotel } from './types';
+import { setupInitialState } from './utils';
 
 export interface MergersScenarioConfig {
-  phase?: string,
-  stage?: string,
-  hotels?: Hotel[][],
+  phase?: string;
+  stage?: string;
+  hotels?: Hotel[][];
 }
 
 /**
  * Facilitates setting up a test grid, by:
- * 
+ *
  * - Filling in IDs based on hotel position
  * - Setting any hotels with chains as "hasBeenPlaced"
  */
@@ -61,9 +61,7 @@ export function getScenario(config?: MergersScenarioConfig, setupFn?: (G, ctx) =
 }
 
 /** Get a test client, with an optional setup function */
-export function getSingleTestClient(
-  numPlayers: number = 2, hotels?: Hotel[][], setupFn?: (G, ctx) => void) {
-
+export function getSingleTestClient(numPlayers: number = 2, hotels?: Hotel[][], setupFn?: (G, ctx) => void) {
   const client = Client({
     game: getScenario({ hotels }, setupFn),
     numPlayers,
@@ -75,8 +73,7 @@ export function getSingleTestClient(
 }
 
 /** Get clients for a multiplayer test, and start them, with an optional setup function */
-export function getMultiplayerTestClients(
-  numPlayers: number = 2, hotels?: Hotel[][], setupFn?: (G, ctx) => void) {
+export function getMultiplayerTestClients(numPlayers: number = 2, hotels?: Hotel[][], setupFn?: (G, ctx) => void) {
   const spec = {
     game: getScenario({ hotels }, setupFn),
     multiplayer: Local(),
