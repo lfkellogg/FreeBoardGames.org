@@ -19,7 +19,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--mergers-color);
 }
 
 .Hotel.Empty {
@@ -93,5 +93,5 @@
   text-align: center;
   box-sizing: border-box;
   font-size: 0.75em;
-  color: #455a64;
+  color: var(--mergers-color);
 }

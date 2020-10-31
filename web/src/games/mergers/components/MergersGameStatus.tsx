@@ -66,7 +66,7 @@ export class MergersGameStatus extends React.Component<MergersGameStatusProps, M
           );
         })}
         <div className={css.Spacer}></div>
-        <Button variant="text" color="primary" onClick={() => this.setState({ showPriceCard: true })}>
+        <Button variant="contained" onClick={() => this.setState({ showPriceCard: true })}>
           Show Guide
         </Button>
       </div>

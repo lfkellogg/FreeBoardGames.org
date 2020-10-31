@@ -34,7 +34,7 @@ export class MergersDialog extends React.Component<MergersDialogProps> {
         </DialogTitle>
         <DialogContent>{this.props.children}</DialogContent>
         <DialogActions>
-          <Button id={this.createId('close')} onClick={this.props.onClose} color="primary" autoFocus>
+          <Button id={this.createId('close')} onClick={this.props.onClose} variant="contained" autoFocus>
             {this.props.closeButtonText}
           </Button>
         </DialogActions>

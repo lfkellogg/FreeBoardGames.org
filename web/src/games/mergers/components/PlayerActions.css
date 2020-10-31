@@ -3,7 +3,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  border: 0.25em solid black;
+  border: 0.25em solid var(--mergers-color);
   border-radius: 0.25em;
   padding: 0 0.5em;
   margin-top: 0.25em;

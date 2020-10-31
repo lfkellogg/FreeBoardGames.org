@@ -12,6 +12,7 @@ import { MergerDetails } from './components/MergerDetails';
 import { MergersDialog } from './components/MergersDialog';
 import { Hotels } from './hotels';
 import { MergersGameStatus } from './components/MergersGameStatus';
+import { createMuiTheme, ThemeProvider } from '@material-ui/core';
 
 export interface BoardProps {
   G: IG;
@@ -182,36 +183,38 @@ export class Board extends React.Component<BoardProps, BoardState> {
     const hotels = new Hotels(this.props.G.hotels);
     return (
       <GameLayout allowWiderScreen={true} gameArgs={this.props.gameArgs}>
-        <MergersGameStatus
-          hotels={hotels}
-          player={this.props.G.players[this.playerID()]}
-          availableStocks={this.props.G.availableStocks}
-          lastMove={this.props.G.lastMove}
-          currentPlayer={!this.props.ctx.gameover && this.props.ctx.currentPlayer}
-          players={this.props.gameArgs?.players}
-        >
-          <HotelGrid
+        <ThemeProvider theme={createMuiTheme({ palette: { type: 'dark' } })}>
+          <MergersGameStatus
             hotels={hotels}
-            lastPlacedHotel={this.props.G.lastPlacedHotel}
-            isPlacingHotel={this.playerStage() === 'placeHotelStage'}
-            playerID={this.props.playerID}
-            onHotelClicked={this.props.moves.placeHotel}
-          />
-          <PlayerActions
-            hotels={hotels}
-            players={this.props.G.players}
+            player={this.props.G.players[this.playerID()]}
             availableStocks={this.props.G.availableStocks}
-            merger={this.props.G.merger}
-            moves={this.props.moves}
-            playerID={this.props.playerID}
-            playerIndex={this.playerIndex()}
-            playerPhase={this.playerPhase()}
-            playerStage={this.playerStage()}
-            gameOverMessage={this.gameOverMessage()}
-          />
-        </MergersGameStatus>
-        {this.maybeRenderMergerDetails()}
-        {this.maybeRenderGameOverDetails()}
+            lastMove={this.props.G.lastMove}
+            currentPlayer={!this.props.ctx.gameover && this.props.ctx.currentPlayer}
+            players={this.props.gameArgs?.players}
+          >
+            <HotelGrid
+              hotels={hotels}
+              lastPlacedHotel={this.props.G.lastPlacedHotel}
+              isPlacingHotel={this.playerStage() === 'placeHotelStage'}
+              playerID={this.props.playerID}
+              onHotelClicked={this.props.moves.placeHotel}
+            />
+            <PlayerActions
+              hotels={hotels}
+              players={this.props.G.players}
+              availableStocks={this.props.G.availableStocks}
+              merger={this.props.G.merger}
+              moves={this.props.moves}
+              playerID={this.props.playerID}
+              playerIndex={this.playerIndex()}
+              playerPhase={this.playerPhase()}
+              playerStage={this.playerStage()}
+              gameOverMessage={this.gameOverMessage()}
+            />
+          </MergersGameStatus>
+          {this.maybeRenderMergerDetails()}
+          {this.maybeRenderGameOverDetails()}
+        </ThemeProvider>
       </GameLayout>
     );
   }

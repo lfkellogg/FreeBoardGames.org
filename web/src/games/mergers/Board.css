@@ -1,10 +1,12 @@
 .Mergers {
   font-size: 1.25em;
   font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
-  color: var(--mergers-dark-grey);
 
   /* Mergers colors */
+  --mergers-background-color: black;
+  --mergers-color: var(--mergers-light-grey);
   --mergers-light-grey: #e0e0e0; /* material gray 300 */
+  --mergers-medium-grey: #9E9E9E; /* material gray 500 */
   --mergers-dark-grey: #212121; /* material gray 900 */
   --mergers-blue-grey: #455a64; /* material blue-gray 700 */
   --mergers-highlight-green: #76ff03; /* material light green A400 */
@@ -31,11 +33,12 @@
 
 .MergersContainer {
   padding: 1em;
-  background-color: white;
   max-height: 100vh;
   overflow-y: auto;
   padding: 50px 10px 10px 10px;
   box-sizing: border-box;
+  color: var(--mergers-color);
+  background-color: var(--mergers-background-color);
 }
 
 .AvailableStockAndPrice {
@@ -53,11 +56,11 @@
 }
 
 .Player.CurrentTurn {
-  border-color: black;
+  border-color: var(--mergers-color);
 }
 
 .Player.YourTurn {
-  border-color: #76ff03; /* material light green A400 */
+  border-color: var(--mergers-highlight-green);
 }
 
 .PlayerMoney {

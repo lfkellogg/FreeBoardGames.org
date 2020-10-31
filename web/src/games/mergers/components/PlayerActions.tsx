@@ -105,7 +105,7 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
 
   renderButton(text: string, onClick: () => void) {
     return (
-      <Button className={css.ActionButton} variant="contained" color="primary" onClick={onClick}>
+      <Button className={css.ActionButton} variant="contained" onClick={onClick}>
         {text}
       </Button>
     );
@@ -184,7 +184,6 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
             className={css.ActionButton}
             disabled={!!errorMsg}
             variant="contained"
-            color="primary"
             onClick={() => {
               if (!!errorMsg) {
                 return;
@@ -274,7 +273,7 @@ export class PlayerActions extends React.Component<PlayerActionsProps, PlayerAct
         <div className={css.MarginRight}>{`Do you want to exchange any ${this.props.merger.chainToMerge} stock?`}</div>
         {this.renderSwapAndSellInput('Swap', setSwap, stocksToSwap)}
         {this.renderSwapAndSellInput('Sell', setSell, stocksToSell)}
-        <Button className={css.ActionButton} variant="contained" color="primary" onClick={onClick}>
+        <Button className={css.ActionButton} variant="contained" onClick={onClick}>
           {numToSwap + numToSell > 0 ? 'OK' : 'Pass'}
         </Button>
       </div>
