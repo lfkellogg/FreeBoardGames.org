@@ -1,10 +1,8 @@
-import { Ctx, Game } from 'boardgame.io';
+import { Game } from 'boardgame.io';
 import { Client } from 'boardgame.io/client';
 import { Local } from 'boardgame.io/multiplayer';
-import { MergersGame } from './game';
 import { Hotels } from './hotels';
 import { Hotel, IG } from './types';
-import { setupInitialState } from './utils';
 
 export interface MergersScenarioConfig {
   phase?: string;
@@ -29,47 +27,6 @@ export function fillInTestHotels(hotels: Hotel[][]): Hotel[][] {
     }
   }
   return hotels;
-}
-
-/**
- * Get a custom Mergers scenario, without the random drawing up front, and where player 0 always
- * goes first.
- */
-export function getScenario(config?: MergersScenarioConfig, setupFn?: (G, ctx) => void, firstFn?: (G, ctx) => number) {
-  const phase = config?.phase || 'buildingPhase';
-
-  const MergersCustomScenario = {
-    ...MergersGame,
-    setup: (ctx: Ctx) => {
-      const G = setupInitialState(ctx.numPlayers);
-      G.hotels = config.hotels || Hotels.buildGrid(4, 4);
-      fillInTestHotels(G.hotels);
-      ctx.events.setPhase(phase);
-      if (config?.stage) {
-        ctx.events.setActivePlayers({ '0': config.stage });
-      }
-      if (setupFn) {
-        setupFn(G, ctx);
-      }
-      return G;
-    },
-  };
-
-  MergersCustomScenario.phases[phase].turn.order.first = firstFn || (() => 0);
-
-  return MergersCustomScenario;
-}
-
-/** Get a test client, with an optional setup function */
-export function getSingleTestClient(numPlayers: number = 2, hotels?: Hotel[][], setupFn?: (G, ctx) => void) {
-  const client = Client({
-    game: getScenario({ hotels }, setupFn),
-    numPlayers,
-  });
-
-  client.start();
-
-  return client;
 }
 
 /** Get clients for a multiplayer test, and start them, with an optional setup function */

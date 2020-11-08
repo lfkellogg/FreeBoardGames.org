@@ -27,18 +27,9 @@ export interface BoardState {
   gameOverDetailsDismissed: boolean;
 }
 
-// TODOs
-// Must do:
-//  - add instructions & image
-//  - more test coverage of game.ts && utils.ts
-//
-// Nice to have:
-//  - refactor out "MergersBoard" class to handle all of the blah(hotels, something) methods in utils
-//  - test what happens around unplayable tiles (e.g. if all tiles are unplayable)
-//  - test drawHotels()
+// TODOs:
 //  - animations
 //  - sounds
-//  - fix layout on small screens
 //  - add validation to swap/sell stock
 export class Board extends React.Component<BoardProps, BoardState> {
   constructor(props) {

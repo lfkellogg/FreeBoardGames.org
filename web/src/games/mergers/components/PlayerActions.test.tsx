@@ -1,41 +1,40 @@
 import React from 'react';
 import Enzyme from 'enzyme';
 import Adapter from 'enzyme-adapter-react-16';
-import { Client } from 'boardgame.io/client';
 import { Chain, IG } from '../types';
 import * as utils from '../utils';
 
 import { PlayerActions } from './PlayerActions';
 import css from './PlayerActions.css';
 import { Hotels } from '../hotels';
-import { getScenario, MergersScenarioConfig } from '../test_utils';
 
 Enzyme.configure({ adapter: new Adapter() });
 
-// TODO: these tests should just be unit tests
 describe('#renderBuyStock', () => {
-  let client;
   let comp;
+  let G: IG;
+  let moves;
 
-  const setUpComponent = (config?: MergersScenarioConfig, setupFn?: (G, ctx) => void) => {
-    client = Client({
-      game: getScenario({ hotels: Hotels.buildGrid() }, setupFn),
-      numPlayers: 3,
-      playerID: '0',
-    });
-    client.moves.buyStock = jest.fn();
+  const setUpComponent = (setupFn?: (G) => void) => {
+    G = {
+      hotels: Hotels.buildGrid(),
+      players: { '0': { stocks: { ...utils.fillStockMap(0) }, money: 6000 } },
+      availableStocks: { ...utils.fillStockMap(25) },
+    };
 
-    const state0 = client.store.getState();
+    moves = { buyStock: jest.fn() };
+
+    setupFn(G);
 
     comp = Enzyme.mount(
       <PlayerActions
-        hotels={new Hotels(state0.G.hotels)}
-        players={state0.G.players}
-        availableStocks={state0.G.availableStocks}
-        merger={state0.G.merger}
-        moves={client.moves}
-        playerStage={config.stage}
-        playerPhase={config.phase}
+        hotels={new Hotels(G.hotels)}
+        players={G.players}
+        availableStocks={G.availableStocks}
+        merger={G.merger}
+        moves={moves}
+        playerStage="buyStockStage"
+        playerPhase="buildingPhase"
         playerID="0"
         playerIndex={0}
         gameOverMessage=""
@@ -51,12 +50,11 @@ describe('#renderBuyStock', () => {
 
   describe('trying to buy zero stocks, even with no money', () => {
     beforeEach(() => {
-      setUpComponent({ phase: 'buildingPhase', stage: 'buyStockStage' }, (G) => {
-        const hotels = new Hotels(G.hotels);
-        hotels.mergeHotel('1-A', { chain: Chain.Tower });
-        hotels.mergeHotel('2-A', { chain: Chain.Tower });
-        hotels.mergeHotel('3-B', { chain: Chain.Luxor });
-        hotels.mergeHotel('4-B', { chain: Chain.Luxor });
+      setUpComponent((G) => {
+        setUpHotel(G, '1-A', Chain.Tower);
+        setUpHotel(G, '2-A', Chain.Tower);
+        setUpHotel(G, '3-B', Chain.Luxor);
+        setUpHotel(G, '4-B', Chain.Luxor);
 
         // player doesn't have any money
         G.players['0'].money = 0;
@@ -73,7 +71,7 @@ describe('#renderBuyStock', () => {
 
   describe('trying to buy 3 stocks with exactly the right amount of money left', () => {
     beforeEach(() => {
-      setUpComponent({ phase: 'buildingPhase', stage: 'buyStockStage' }, (G) => {
+      setUpComponent((G) => {
         // hotels are all from the cheapest tier and of size 2 = $200 per stock
         setUpHotel(G, '1-A', Chain.Tower);
         setUpHotel(G, '2-A', Chain.Tower);
@@ -109,7 +107,7 @@ describe('#renderBuyStock', () => {
 
   describe('trying to buy stock with not enough money left', () => {
     beforeEach(() => {
-      setUpComponent({ phase: 'buildingPhase', stage: 'buyStockStage' }, (G) => {
+      setUpComponent((G) => {
         // hotels are all from the cheapest tier and of size 2 = $200 per stock
         setUpHotel(G, '1-A', Chain.Tower);
         setUpHotel(G, '2-A', Chain.Tower);
@@ -141,7 +139,7 @@ describe('#renderBuyStock', () => {
 
   describe('trying to buy more of a stock than is available', () => {
     beforeEach(() => {
-      setUpComponent({ phase: 'buildingPhase', stage: 'buyStockStage' }, (G) => {
+      setUpComponent((G) => {
         setUpHotel(G, '1-A', Chain.Tower);
         setUpHotel(G, '2-A', Chain.Tower);
         setUpHotel(G, '3-B', Chain.Luxor);
@@ -169,7 +167,7 @@ describe('#renderBuyStock', () => {
 
   describe('trying to buy more than 3 stocks', () => {
     beforeEach(() => {
-      setUpComponent({ phase: 'buildingPhase', stage: 'buyStockStage' }, (G) => {
+      setUpComponent((G) => {
         setUpHotel(G, '1-A', Chain.Tower);
         setUpHotel(G, '2-A', Chain.Tower);
         setUpHotel(G, '3-B', Chain.Luxor);
@@ -198,7 +196,7 @@ describe('#renderBuyStock', () => {
 
   describe('entering a value that is not a number', () => {
     beforeEach(() => {
-      setUpComponent({ phase: 'buildingPhase', stage: 'buyStockStage' }, (G) => {
+      setUpComponent((G) => {
         setUpHotel(G, '1-A', Chain.Tower);
         setUpHotel(G, '2-A', Chain.Tower);
         setUpHotel(G, '3-B', Chain.Luxor);

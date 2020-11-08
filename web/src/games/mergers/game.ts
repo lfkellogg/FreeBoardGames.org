@@ -14,7 +14,6 @@ export function getHotels(G: IG): Hotels {
   return new Hotels(G.hotels);
 }
 
-// TODO: this appears to be broken in the case where the player has no playable tiles
 export function placeHotel(G: IG, ctx: Ctx, id?: string) {
   const hotels = getHotels(G);
   if (!id) {
@@ -415,12 +414,10 @@ export function nextPlayerPos(ctx: Ctx, playerPos: number): number {
   return (playerPos + 1) % ctx.numPlayers;
 }
 
-// TODO: simplify this
 export function mergerPhaseFirstTurn(G: IG, ctx: Ctx) {
   return mergerPhaseNextTurn(G, ctx, true);
 }
 
-// TODO: simplify this
 export function mergerPhaseNextTurn(G: IG, ctx: Ctx, isFirst: boolean = false) {
   const mergingPlayerID = getHotels(G).getHotel(G.lastPlacedHotel).drawnByPlayer;
   const mergingPlayerPos = ctx.playOrder.indexOf(mergingPlayerID);
@@ -473,6 +470,7 @@ export function getMergerResults(G: IG, chainToMerge: Chain): Merger {
   };
 }
 
+// TODO: implement playerView
 export const MergersGame: Game<IG> = {
   name: 'mergers',
 
@@ -485,18 +483,6 @@ export const MergersGame: Game<IG> = {
 
     return G;
   },
-
-  // playerView: (G: IG, ctx: Ctx, playerID: string): any => {
-  //   // remove hotels from other players
-  //   Object.values(G.players).filter(p => p.id !== playerID).forEach(p => {
-  //     p.hotels = [];
-  //   });
-  //   return G;
-
-  //   // TODO:
-  //   // remove entire state if playerID is undefined
-  //   // check if playing in secret mode, remove money, stocks too
-  // },
 
   phases: {
     buildingPhase: {

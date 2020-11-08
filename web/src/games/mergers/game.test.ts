@@ -5,20 +5,17 @@ import {
   awardBonuses,
   buyStock,
   chooseChainToMerge,
+  chooseNewChain,
   chooseSurvivingChain,
   declareGameOver,
   drawHotels,
-  firstBuildTurn,
   mergerPhaseNextTurn,
+  MergersGame,
   placeHotel,
 } from './game';
-import { fillInTestHotels, getMultiplayerTestClients, getScenario, getSingleTestClient } from './test_utils';
+import { fillInTestHotels, getMultiplayerTestClients } from './test_utils';
 import { Chain, Hotel, IG, Player } from './types';
-import { fillStockMap } from './utils';
-
-// TODO:
-// - test endgame
-// - integration test that starts a game, makes mergers, maybe ends the game
+import { fillStockMap, setupInitialState } from './utils';
 
 const DEFAULT_CTX: Ctx = {
   numPlayers: 2,
@@ -32,7 +29,6 @@ const DEFAULT_CTX: Ctx = {
 };
 
 describe('placeHotel', () => {
-  let client;
   let originalBoard: Hotel[][];
 
   beforeEach(() => {
@@ -53,33 +49,36 @@ describe('placeHotel', () => {
         { id: '3-C', drawnByPlayer: '0' }, // would form a new chain w/ 3-B
       ],
     ];
-    // originalBoard = setupTestHotels();
-
-    // originalBoard.mergeHotel('1-A', { hasBeenPlaced: true, chain: Chain.Tower });
-    // originalBoard.mergeHotel('2-A', { hasBeenPlaced: true, chain: Chain.Tower });
-    // originalBoard.mergeHotel('3-A', { drawnByPlayer: '0' }); // would join Tower, and bring in 3-B
-
-    // originalBoard.mergeHotel('1-B', { drawnByPlayer: '0' }); // would join Tower
-    // // 2-B is unchanged
-    // originalBoard.mergeHotel('3-B', { hasBeenPlaced: true });
-
-    // // 3-A is unchanged
-    // // 3-B is unchanged
-    // originalBoard.mergeHotel('3-C', { drawnByPlayer: '0' }); // would form a new chain w/ 3-B
-
-    client = getSingleTestClient(2, originalBoard);
   });
 
   it('sets the last placed hotel', () => {
-    client.moves.placeHotel('1-B');
+    const G: IG = {
+      hotels: originalBoard,
+    };
+    const ctx: Ctx = {
+      ...DEFAULT_CTX,
+      playerID: '0',
+      events: { endStage: jest.fn() },
+    };
 
-    expect(client.store.getState().G.lastPlacedHotel).toEqual('1-B');
+    placeHotel(G, ctx, '1-B');
+
+    expect(G.lastPlacedHotel).toEqual('1-B');
   });
 
   it('joins hotel to a single adjacent chain', () => {
-    client.moves.placeHotel('1-B');
+    const G: IG = {
+      hotels: originalBoard,
+    };
+    const ctx: Ctx = {
+      ...DEFAULT_CTX,
+      playerID: '0',
+      events: { endStage: jest.fn() },
+    };
 
-    expect(client.store.getState().G.hotels).toEqual([
+    placeHotel(G, ctx, '1-B');
+
+    expect(G.hotels).toEqual([
       [
         { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower },
         { id: '2-A', hasBeenPlaced: true, chain: Chain.Tower },
@@ -95,9 +94,18 @@ describe('placeHotel', () => {
   });
 
   it('joins a neighboring unassigned hotel to adjacent chain', () => {
-    client.moves.placeHotel('3-A');
+    const G: IG = {
+      hotels: originalBoard,
+    };
+    const ctx: Ctx = {
+      ...DEFAULT_CTX,
+      playerID: '0',
+      events: { endStage: jest.fn() },
+    };
 
-    expect(client.store.getState().G.hotels).toEqual([
+    placeHotel(G, ctx, '3-A');
+
+    expect(G.hotels).toEqual([
       [
         { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower },
         { id: '2-A', hasBeenPlaced: true, chain: Chain.Tower },
@@ -113,8 +121,18 @@ describe('placeHotel', () => {
   });
 
   it('starts a new chain when placed next to a lone hotel', () => {
-    client.moves.placeHotel('3-C');
-    expect(client.store.getState().G.hotels).toEqual([
+    const G: IG = {
+      hotels: originalBoard,
+    };
+    const ctx: Ctx = {
+      ...DEFAULT_CTX,
+      playerID: '0',
+      events: { endStage: jest.fn(), setStage: jest.fn() },
+    };
+
+    placeHotel(G, ctx, '3-C');
+
+    expect(G.hotels).toEqual([
       [
         { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower },
         { id: '2-A', hasBeenPlaced: true, chain: Chain.Tower },
@@ -127,9 +145,7 @@ describe('placeHotel', () => {
         { id: '3-C', hasBeenPlaced: true, drawnByPlayer: '0' }, // placed
       ],
     ]);
-    expect(client.store.getState().ctx.activePlayers).toEqual({
-      '0': 'chooseNewChainStage',
-    });
+    expect(ctx.events.setStage).toHaveBeenCalledWith('chooseNewChainStage');
   });
 
   it('does not allow a player with hotels to pass', () => {
@@ -278,26 +294,36 @@ describe('buyStock', () => {
 });
 
 describe('chooseNewChain', () => {
-  let client;
   let originalBoard: Hotel[][];
+  let G: IG;
+  let ctx: Ctx;
 
   beforeEach(() => {
     originalBoard = [
       [
         { id: '1-A', hasBeenPlaced: true },
-        { id: '2-A', drawnByPlayer: '0' },
+        { id: '2-A', hasBeenPlaced: true, drawnByPlayer: '0' },
         { id: '3-A', hasBeenPlaced: true },
         { id: '4-A', hasBeenPlaced: true },
       ],
     ];
-    client = getSingleTestClient(2, originalBoard);
-    client.moves.placeHotel('2-A');
+    G = {
+      players: { '0': { stocks: { ...fillStockMap(0) } } },
+      availableStocks: { ...fillStockMap(25) },
+      hotels: originalBoard,
+      lastPlacedHotel: '2-A',
+    };
+    ctx = {
+      ...DEFAULT_CTX,
+      playerID: '0',
+      events: { endStage: jest.fn() },
+    };
   });
 
   it('should assign the chain to all hotels in the new chain', () => {
-    client.moves.chooseNewChain(Chain.American);
+    chooseNewChain(G, ctx, Chain.American);
 
-    expect(client.store.getState().G.hotels).toEqual([
+    expect(G.hotels).toEqual([
       [
         { id: '1-A', hasBeenPlaced: true, chain: Chain.American },
         { id: '2-A', hasBeenPlaced: true, chain: Chain.American, drawnByPlayer: '0' },
@@ -308,9 +334,9 @@ describe('chooseNewChain', () => {
   });
 
   it('should assign one bonus stock to the player who placed the last hotel', () => {
-    client.moves.chooseNewChain(Chain.American);
+    chooseNewChain(G, ctx, Chain.American);
 
-    expect(client.store.getState().G.players['0'].stocks[Chain.American]).toEqual(1);
+    expect(G.players['0'].stocks[Chain.American]).toEqual(1);
   });
 });
 
@@ -818,9 +844,10 @@ describe('mergerPhase', () => {
     let p1;
     let originalBoard: Hotel[][];
     beforeEach(() => {
-      originalBoard = [
+      originalBoard = fillInTestHotels([
         [
-          { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower },
+          // having 1-A be drawn by player 0 ensures they will have the first turn
+          { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower, drawnByPlayer: '0' },
           { id: '2-A', hasBeenPlaced: true, chain: Chain.Tower },
           { id: '3-A' },
           { id: '4-A' },
@@ -837,16 +864,23 @@ describe('mergerPhase', () => {
           { id: '3-C' },
           { id: '4-C' },
         ],
-      ];
+      ]);
 
-      const scenario = getScenario({ hotels: originalBoard }, (G) => {
-        G.players['0'].stocks[Chain.Tower] = 1;
-        G.players['0'].stocks[Chain.Continental] = 2;
-        G.players['1'].stocks[Chain.American] = 1;
-        G.players['1'].stocks[Chain.Continental] = 1;
-      });
+      const MergersCustomScenario = {
+        ...MergersGame,
+        setup: (ctx: Ctx) => {
+          const G = setupInitialState(ctx.numPlayers);
+          G.hotels = originalBoard;
+          G.players['0'].stocks[Chain.Tower] = 1;
+          G.players['0'].stocks[Chain.Continental] = 2;
+          G.players['1'].stocks[Chain.American] = 1;
+          G.players['1'].stocks[Chain.Continental] = 1;
+          ctx.events.setPhase('buildingPhase');
+          return G;
+        },
+      };
 
-      const clients = getMultiplayerTestClients(2, scenario);
+      const clients = getMultiplayerTestClients(2, MergersCustomScenario);
 
       p0 = clients[0];
       p1 = clients[1];
@@ -906,7 +940,7 @@ describe('mergerPhase', () => {
       // absorbs hotels
       const expectedBoard = [
         [
-          { id: '1-A', hasBeenPlaced: true, chain: Chain.American },
+          { id: '1-A', hasBeenPlaced: true, chain: Chain.American, drawnByPlayer: '0' },
           { id: '2-A', hasBeenPlaced: true, chain: Chain.American },
           { id: '3-A' },
           { id: '4-A' },
@@ -935,7 +969,8 @@ describe('mergerPhase', () => {
     beforeEach(() => {
       originalBoard = [
         [
-          { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower },
+          // having 1-A be drawn by player 0 ensures they will have the first turn
+          { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower, drawnByPlayer: '0' },
           { id: '2-A', hasBeenPlaced: true, chain: Chain.Tower },
           { id: '3-A' },
         ],
@@ -947,11 +982,18 @@ describe('mergerPhase', () => {
         ],
       ];
 
-      const scenario = getScenario({ hotels: originalBoard }, (G) => {
-        G.players['1'].stocks[Chain.Tower] = 1;
-      });
+      const MergersCustomScenario = {
+        ...MergersGame,
+        setup: (ctx: Ctx) => {
+          const G = setupInitialState(ctx.numPlayers);
+          G.hotels = originalBoard;
+          G.players['1'].stocks[Chain.Tower] = 1;
+          ctx.events.setPhase('buildingPhase');
+          return G;
+        },
+      };
 
-      const clients = getMultiplayerTestClients(2, scenario);
+      const clients = getMultiplayerTestClients(2, MergersCustomScenario);
 
       p0 = clients[0];
       p1 = clients[1];
@@ -988,7 +1030,7 @@ describe('mergerPhase', () => {
       // absorbs hotels
       const expectedBoard = [
         [
-          { id: '1-A', hasBeenPlaced: true, chain: Chain.Continental },
+          { id: '1-A', hasBeenPlaced: true, chain: Chain.Continental, drawnByPlayer: '0' },
           { id: '2-A', hasBeenPlaced: true, chain: Chain.Continental },
           { id: '3-A' },
         ],
@@ -1014,32 +1056,42 @@ describe('mergers', () => {
   let p2;
 
   beforeEach(() => {
-    // prevent hotel selection by assigning all tiles up front
-    const hotels = [
-      //        A                        A                     A                        A
-      [{ drawnByPlayer: '0' }, { drawnByPlayer: '0' }, { drawnByPlayer: '0' }, { drawnByPlayer: '0' }],
-      //        A                        A                     A                        A
-      [{ drawnByPlayer: '0' }, { drawnByPlayer: '2' }, { drawnByPlayer: '1' }, { drawnByPlayer: '1' }],
-      //        A                        A                                              A
+    // Prevent hotel selection by assigning all tiles up front.
+    // Assign three initial hotels in place of random initial assignment.
+    // Player 0 placed 1-A so will go first.
+    const hotels = fillInTestHotels([
+      [
+        { drawnByPlayer: '0', hasBeenPlaced: true },
+        { drawnByPlayer: '0' },
+        { drawnByPlayer: '0' },
+        { drawnByPlayer: '0' },
+      ],
+      [
+        { drawnByPlayer: '0' },
+        { drawnByPlayer: '2' },
+        { drawnByPlayer: '1' },
+        { drawnByPlayer: '1', hasBeenPlaced: true },
+      ],
       [{ drawnByPlayer: '2' }, { drawnByPlayer: '2' }, { drawnByPlayer: '2' }, { drawnByPlayer: '1' }],
-      //        A                        A                     A                        A
-      [{ drawnByPlayer: '2' }, { drawnByPlayer: '2' }, { drawnByPlayer: '1' }, { drawnByPlayer: '1' }],
-    ];
-    // TODO: refactor this first turn stuff
-    const clients = getMultiplayerTestClients(
-      3,
-      getScenario(
-        { hotels },
-        () => {},
-        (G, ctx) => {
-          if (G.lastPlacedHotel) {
-            return firstBuildTurn(G, ctx);
-          } else {
-            return 0;
-          }
-        },
-      ),
-    );
+      [
+        { drawnByPlayer: '2', hasBeenPlaced: true },
+        { drawnByPlayer: '2' },
+        { drawnByPlayer: '1' },
+        { drawnByPlayer: '1' },
+      ],
+    ]);
+
+    const MergersCustomScenario = {
+      ...MergersGame,
+      setup: (ctx: Ctx) => {
+        const G = setupInitialState(ctx.numPlayers);
+        G.hotels = hotels;
+        ctx.events.setPhase('buildingPhase');
+        return G;
+      },
+    };
+
+    const clients = getMultiplayerTestClients(3, MergersCustomScenario);
 
     p0 = clients[0];
     p1 = clients[1];
@@ -1047,18 +1099,6 @@ describe('mergers', () => {
   });
 
   it('correctly plays out an entire game', () => {
-    p0.moves.placeHotel('1-A');
-    p0.moves.buyStock();
-    p0.moves.drawHotels();
-
-    p1.moves.placeHotel('4-B');
-    p1.moves.buyStock();
-    p1.moves.drawHotels();
-
-    p2.moves.placeHotel('1-D');
-    p2.moves.buyStock();
-    p2.moves.drawHotels();
-
     p0.moves.placeHotel('2-A');
     p0.moves.chooseNewChain(Chain.Tower);
     p0.moves.buyStock({ [Chain.Tower]: 3 });

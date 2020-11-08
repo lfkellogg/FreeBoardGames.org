@@ -6,18 +6,22 @@ import { GameMode } from 'gamesShared/definitions/mode';
 import { MergersGame } from './game';
 
 import { Board, BoardProps, BoardState } from './board';
-import { Chain, IG } from './types';
-import { getScenario } from './test_utils';
-import { Hotels } from './hotels';
-
-type SetUpStateFn = (G, ctx) => void;
-
-interface TestConfig {
-  phase?: string;
-  stage?: string;
-}
+import { Chain } from './types';
+import { setupInitialState } from './utils';
+import { Ctx } from 'boardgame.io';
 
 Enzyme.configure({ adapter: new Adapter() });
+
+const DEFAULT_CTX: Ctx = {
+  numPlayers: 3,
+  playOrder: ['0', '1', '2'],
+  playOrderPos: 0,
+  playerID: '0',
+  activePlayers: null,
+  currentPlayer: '0',
+  turn: 1,
+  phase: 'buildingPhase',
+};
 
 let client;
 
@@ -42,29 +46,21 @@ class TestBoard extends Board {
   }
 }
 
-const setUpComponent = (
-  config?: TestConfig,
-  setUpStateFn?: SetUpStateFn,
-): ReactWrapper<BoardProps, BoardState, Board> => {
-  client = Client({
-    game: config || setUpStateFn ? getScenario(config, setUpStateFn) : MergersGame,
-    numPlayers: 3,
-    playerID: '0',
-  });
-  client.moves.buyStock = jest.fn();
-
-  const state0 = client.store.getState();
-
-  return Enzyme.mount(<TestBoard G={state0.G} ctx={state0.ctx} moves={client.moves} playerID="0" />);
-};
-
 // TODO: add more tests
 describe('Board', () => {
   describe('on game start', () => {
     let comp: ReactWrapper<BoardProps, BoardState, Board>;
 
     beforeEach(() => {
-      comp = setUpComponent();
+      client = Client({
+        game: MergersGame,
+        numPlayers: 3,
+        playerID: '0',
+      });
+
+      const state0 = client.store.getState();
+
+      comp = Enzyme.mount(<TestBoard G={state0.G} ctx={state0.ctx} moves={client.moves} playerID="0" />);
     });
 
     it('renders all players', () => {
@@ -100,29 +96,25 @@ describe('Board', () => {
     let comp: ReactWrapper<BoardProps, BoardState, Board>;
 
     beforeEach(() => {
-      comp = setUpComponent({ phase: 'mergerPhase' }, (G: IG) => {
-        G.merger = {
-          survivingChain: Chain.Continental,
-          chainToMerge: Chain.Tower,
-          mergingChains: [Chain.Tower],
-        };
+      const G = setupInitialState(3);
+      G.merger = {
+        survivingChain: Chain.Continental,
+        chainToMerge: Chain.Tower,
+        mergingChains: [Chain.Tower],
+        chainSize: 3,
+        stockCounts: { '0': 10, '1': 5, '2': 0 },
+        bonuses: { '0': 3000, '1': 1500 },
+      };
 
-        // make Tower a chain of size 3
-        const hotels = new Hotels(G.hotels);
-        hotels.getHotel('1-A').chain = Chain.Tower;
-        hotels.getHotel('2-A').chain = Chain.Tower;
-        hotels.getHotel('3-A').chain = Chain.Tower;
+      const ctx = { ...DEFAULT_CTX, phase: 'mergerPhase' };
 
-        G.players['0'].stocks[Chain.Tower] = 10;
-        G.players['1'].stocks[Chain.Tower] = 5;
-      });
+      comp = Enzyme.mount(<TestBoard G={G} ctx={ctx} moves={{}} playerID="0" />);
     });
 
     it('renders the merger dialog', () => {
       expect(comp.find('#merger-details-dialog').length).toBeGreaterThan(0);
     });
 
-    // TODO: move this to a specific test for merger details
     it('displays merger details', () => {
       expect(comp.find('#bonus-Tower-0').first().text()).toContain('player0 gets $3000');
       expect(comp.find('#bonus-Tower-1').first().text()).toContain('player1 gets $1500');
