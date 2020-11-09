@@ -32,23 +32,23 @@ describe('placeHotel', () => {
   let originalBoard: Hotel[][];
 
   beforeEach(() => {
-    originalBoard = [
+    originalBoard = fillInTestHotels([
       [
-        { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower },
-        { id: '2-A', hasBeenPlaced: true, chain: Chain.Tower },
-        { id: '3-A', drawnByPlayer: '0' }, // would join Tower, and bring in 3-B
+        { chain: Chain.Tower },
+        { chain: Chain.Tower },
+        { drawnByPlayer: '0' }, // would join Tower, and bring in 3-B
       ],
       [
-        { id: '1-B', drawnByPlayer: '0' }, // would join Tower
-        { id: '2-B' },
-        { id: '3-B', hasBeenPlaced: true },
+        { drawnByPlayer: '0' }, // would join Tower
+        {},
+        { hasBeenPlaced: true },
       ],
       [
-        { id: '1-C' },
-        { id: '2-C' },
-        { id: '3-C', drawnByPlayer: '0' }, // would form a new chain w/ 3-B
+        {},
+        {},
+        { drawnByPlayer: '0' }, // would form a new chain w/ 3-B
       ],
-    ];
+    ]);
   });
 
   it('sets the last placed hotel', () => {
@@ -78,19 +78,17 @@ describe('placeHotel', () => {
 
     placeHotel(G, ctx, '1-B');
 
-    expect(G.hotels).toEqual([
-      [
-        { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower },
-        { id: '2-A', hasBeenPlaced: true, chain: Chain.Tower },
-        { id: '3-A', drawnByPlayer: '0' },
-      ],
-      [
-        { id: '1-B', hasBeenPlaced: true, chain: Chain.Tower, drawnByPlayer: '0' }, // joined Tower
-        { id: '2-B' },
-        { id: '3-B', hasBeenPlaced: true },
-      ],
-      [{ id: '1-C' }, { id: '2-C' }, { id: '3-C', drawnByPlayer: '0' }],
-    ]);
+    expect(G.hotels).toEqual(
+      fillInTestHotels([
+        [{ chain: Chain.Tower }, { chain: Chain.Tower }, { drawnByPlayer: '0' }],
+        [
+          { chain: Chain.Tower, drawnByPlayer: '0' }, // joined Tower
+          {},
+          { hasBeenPlaced: true },
+        ],
+        [{}, {}, { drawnByPlayer: '0' }],
+      ]),
+    );
   });
 
   it('joins a neighboring unassigned hotel to adjacent chain', () => {
@@ -105,19 +103,21 @@ describe('placeHotel', () => {
 
     placeHotel(G, ctx, '3-A');
 
-    expect(G.hotels).toEqual([
-      [
-        { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower },
-        { id: '2-A', hasBeenPlaced: true, chain: Chain.Tower },
-        { id: '3-A', hasBeenPlaced: true, chain: Chain.Tower, drawnByPlayer: '0' }, // joined Tower
-      ],
-      [
-        { id: '1-B', drawnByPlayer: '0' },
-        { id: '2-B' },
-        { id: '3-B', hasBeenPlaced: true, chain: Chain.Tower }, // joined Tower
-      ],
-      [{ id: '1-C' }, { id: '2-C' }, { id: '3-C', drawnByPlayer: '0' }],
-    ]);
+    expect(G.hotels).toEqual(
+      fillInTestHotels([
+        [
+          { chain: Chain.Tower },
+          { chain: Chain.Tower },
+          { chain: Chain.Tower, drawnByPlayer: '0' }, // joined Tower
+        ],
+        [
+          { drawnByPlayer: '0' },
+          {},
+          { chain: Chain.Tower }, // joined Tower
+        ],
+        [{}, {}, { drawnByPlayer: '0' }],
+      ]),
+    );
   });
 
   it('starts a new chain when placed next to a lone hotel', () => {
@@ -132,19 +132,17 @@ describe('placeHotel', () => {
 
     placeHotel(G, ctx, '3-C');
 
-    expect(G.hotels).toEqual([
-      [
-        { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower },
-        { id: '2-A', hasBeenPlaced: true, chain: Chain.Tower },
-        { id: '3-A', drawnByPlayer: '0' },
-      ],
-      [{ id: '1-B', drawnByPlayer: '0' }, { id: '2-B' }, { id: '3-B', hasBeenPlaced: true }],
-      [
-        { id: '1-C' },
-        { id: '2-C' },
-        { id: '3-C', hasBeenPlaced: true, drawnByPlayer: '0' }, // placed
-      ],
-    ]);
+    expect(G.hotels).toEqual(
+      fillInTestHotels([
+        [{ chain: Chain.Tower }, { chain: Chain.Tower }, { drawnByPlayer: '0' }],
+        [{ drawnByPlayer: '0' }, {}, { hasBeenPlaced: true }],
+        [
+          {},
+          {},
+          { hasBeenPlaced: true, drawnByPlayer: '0' }, // placed
+        ],
+      ]),
+    );
     expect(ctx.events.setStage).toHaveBeenCalledWith('chooseNewChainStage');
   });
 
@@ -186,28 +184,28 @@ describe('buyStock', () => {
 
   const TEST_HOTELS = [
     [
-      { id: '1-A', chain: Chain.Tower },
-      { id: '2-A', chain: Chain.Tower },
-      { id: '3-A' },
-      { id: '4-A', chain: Chain.Continental },
-      { id: '5-A', chain: Chain.Continental },
-      { id: '6-A', chain: Chain.Continental },
+      { chain: Chain.Tower },
+      { chain: Chain.Tower },
+      {},
+      { chain: Chain.Continental },
+      { chain: Chain.Continental },
+      { chain: Chain.Continental },
     ],
   ];
 
   const GAME_OVER_HOTELS = [
     [
-      { id: '1-A', chain: Chain.Tower },
-      { id: '2-A', chain: Chain.Tower },
-      { id: '3-A', chain: Chain.Tower },
-      { id: '4-A', chain: Chain.Tower },
-      { id: '5-A', chain: Chain.Tower },
-      { id: '6-A', chain: Chain.Tower },
-      { id: '7-A', chain: Chain.Tower },
-      { id: '8-A', chain: Chain.Tower },
-      { id: '9-A', chain: Chain.Tower },
-      { id: '10-A', chain: Chain.Tower },
-      { id: '11-A', chain: Chain.Tower },
+      { chain: Chain.Tower },
+      { chain: Chain.Tower },
+      { chain: Chain.Tower },
+      { chain: Chain.Tower },
+      { chain: Chain.Tower },
+      { chain: Chain.Tower },
+      { chain: Chain.Tower },
+      { chain: Chain.Tower },
+      { chain: Chain.Tower },
+      { chain: Chain.Tower },
+      { chain: Chain.Tower },
     ],
   ];
 
@@ -541,7 +539,7 @@ describe('mergerPhaseNextTurn', () => {
   it('wraps around to the beginning of the order', () => {
     const G: IG = {
       lastPlacedHotel: '1-A',
-      hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
+      hotels: [[{ drawnByPlayer: 'Player3' }]],
       merger: {
         chainToMerge: Chain.Tower,
         mergingChains: [Chain.Tower],
@@ -565,7 +563,7 @@ describe('mergerPhaseNextTurn', () => {
   it('skips the merging player if they do not have any stock', () => {
     const G: IG = {
       lastPlacedHotel: '1-A',
-      hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
+      hotels: [[{ drawnByPlayer: 'Player3' }]],
       merger: {
         chainToMerge: Chain.Tower,
         mergingChains: [Chain.Tower],
@@ -593,7 +591,7 @@ describe('mergerPhaseNextTurn', () => {
   it('skips to the next player that has not exchanged stock', () => {
     const G: IG = {
       lastPlacedHotel: '1-A',
-      hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
+      hotels: [[{ drawnByPlayer: 'Player3' }]],
       merger: {
         chainToMerge: Chain.Tower,
         mergingChains: [Chain.Tower],
@@ -631,7 +629,7 @@ describe('mergerPhaseNextTurn', () => {
           Player4: { swap: 0, sell: 0 },
         },
       },
-      hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
+      hotels: [[{ drawnByPlayer: 'Player3' }]],
     };
     const ctx = {
       playOrderPos: 1,
@@ -650,7 +648,7 @@ describe('mergerPhaseNextTurn', () => {
   it('returns undefined if no one else has any stock', () => {
     const G = {
       lastPlacedHotel: '1-A',
-      hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
+      hotels: [[{ drawnByPlayer: 'Player3' }]],
       merger: {
         chainToMerge: Chain.Tower,
         mergingChains: [Chain.Tower],
@@ -679,7 +677,7 @@ describe('mergerPhaseNextTurn', () => {
   it('returns chooseNextMergerPhase if there are more chains to merge', () => {
     const G = {
       lastPlacedHotel: '1-A',
-      hotels: [[{ id: '1-A', drawnByPlayer: 'Player3' }]],
+      hotels: [[{ drawnByPlayer: 'Player3' }]],
       merger: {
         chainToMerge: Chain.Tower,
         mergingChains: [Chain.Tower, Chain.Luxor],
@@ -712,12 +710,12 @@ describe('declareGameOver', () => {
 
   const TEST_HOTELS = [
     [
-      { id: '1-A', chain: Chain.Tower },
-      { id: '2-A', chain: Chain.Tower },
-      { id: '3-A' },
-      { id: '4-A', chain: Chain.Continental },
-      { id: '5-A', chain: Chain.Continental },
-      { id: '6-A', chain: Chain.Continental },
+      { chain: Chain.Tower },
+      { chain: Chain.Tower },
+      {},
+      { chain: Chain.Continental },
+      { chain: Chain.Continental },
+      { chain: Chain.Continental },
     ],
   ];
 
@@ -761,8 +759,8 @@ describe('declareGameOver', () => {
     // Started with $2000
     // Tower minority = $1000
     // Tower stock = 4 x $200 = $800
-    // Coninental majority + minority = $7500
-    // Coninental stock = 13 x $500 = $6500
+    // Continental majority + minority = $7500
+    // Continental stock = 13 x $500 = $6500
     expect(G.players['1'].money).toEqual(17800);
 
     expect(ctx.events.endGame).toHaveBeenCalled();
@@ -823,13 +821,13 @@ describe('drawHotels', () => {
         [{ chain: Chain.Tower }, { hasBeenRemoved: true }, { chain: Chain.Continental }],
         [{ chain: Chain.Tower }, { drawnByPlayer: '0' }, { chain: Chain.Continental }],
         [{ chain: Chain.Tower }, { drawnByPlayer: '0' }, { chain: Chain.Continental }],
-        [{ chain: Chain.Tower }, { id: 'test-4' }, { chain: Chain.Continental }],
-        [{ chain: Chain.Tower }, { id: 'test-5' }, { chain: Chain.Continental }],
-        [{ chain: Chain.Tower }, { id: 'test-6' }, { chain: Chain.Continental }],
-        [{ chain: Chain.Tower }, { id: 'test-7' }, { chain: Chain.Continental }],
-        [{ chain: Chain.Tower }, { id: 'test-8' }, { chain: Chain.Continental }],
-        [{ chain: Chain.Tower }, { id: 'test-9' }, { chain: Chain.Continental }],
-        [{ chain: Chain.Tower }, { id: 'test-10' }, { chain: Chain.Continental }],
+        [{ chain: Chain.Tower }, {}, { chain: Chain.Continental }],
+        [{ chain: Chain.Tower }, {}, { chain: Chain.Continental }],
+        [{ chain: Chain.Tower }, {}, { chain: Chain.Continental }],
+        [{ chain: Chain.Tower }, {}, { chain: Chain.Continental }],
+        [{ chain: Chain.Tower }, {}, { chain: Chain.Continental }],
+        [{ chain: Chain.Tower }, {}, { chain: Chain.Continental }],
+        [{ chain: Chain.Tower }, {}, { chain: Chain.Continental }],
         [{ drawnByPlayer: '0' }, { drawnByPlayer: '0' }, { drawnByPlayer: '0' }],
       ]),
     );
@@ -847,23 +845,18 @@ describe('mergerPhase', () => {
       originalBoard = fillInTestHotels([
         [
           // having 1-A be drawn by player 0 ensures they will have the first turn
-          { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower, drawnByPlayer: '0' },
-          { id: '2-A', hasBeenPlaced: true, chain: Chain.Tower },
-          { id: '3-A' },
-          { id: '4-A' },
+          { chain: Chain.Tower, drawnByPlayer: '0' },
+          { chain: Chain.Tower },
+          {},
+          {},
         ],
         [
-          { id: '1-B' },
-          { id: '2-B', drawnByPlayer: '0' }, // will merge all three chains
-          { id: '3-B', hasBeenPlaced: true, chain: Chain.American },
-          { id: '4-B', hasBeenPlaced: true, chain: Chain.American },
+          {},
+          { drawnByPlayer: '0' }, // will merge all three chains
+          { chain: Chain.American },
+          { chain: Chain.American },
         ],
-        [
-          { id: '1-C', hasBeenPlaced: true, chain: Chain.Continental },
-          { id: '2-C', hasBeenPlaced: true, chain: Chain.Continental },
-          { id: '3-C' },
-          { id: '4-C' },
-        ],
+        [{ chain: Chain.Continental }, { chain: Chain.Continental }, {}, {}],
       ]);
 
       const MergersCustomScenario = {
@@ -938,26 +931,11 @@ describe('mergerPhase', () => {
       expect(p0.store.getState().ctx.activePlayers[0]).toEqual('buyStockStage');
 
       // absorbs hotels
-      const expectedBoard = [
-        [
-          { id: '1-A', hasBeenPlaced: true, chain: Chain.American, drawnByPlayer: '0' },
-          { id: '2-A', hasBeenPlaced: true, chain: Chain.American },
-          { id: '3-A' },
-          { id: '4-A' },
-        ],
-        [
-          { id: '1-B' },
-          { id: '2-B', drawnByPlayer: '0', hasBeenPlaced: true, chain: Chain.American },
-          { id: '3-B', hasBeenPlaced: true, chain: Chain.American },
-          { id: '4-B', hasBeenPlaced: true, chain: Chain.American },
-        ],
-        [
-          { id: '1-C', hasBeenPlaced: true, chain: Chain.American },
-          { id: '2-C', hasBeenPlaced: true, chain: Chain.American },
-          { id: '3-C' },
-          { id: '4-C' },
-        ],
-      ];
+      const expectedBoard = fillInTestHotels([
+        [{ chain: Chain.American, drawnByPlayer: '0' }, { chain: Chain.American }, {}, {}],
+        [{}, { chain: Chain.American, drawnByPlayer: '0' }, { chain: Chain.American }, { chain: Chain.American }],
+        [{ chain: Chain.American }, { chain: Chain.American }, {}, {}],
+      ]);
       expect(p0.store.getState().G.hotels).toEqual(expectedBoard);
     });
   });
@@ -967,20 +945,16 @@ describe('mergerPhase', () => {
     let p1;
     let originalBoard: Hotel[][];
     beforeEach(() => {
-      originalBoard = [
+      originalBoard = fillInTestHotels([
         [
           // having 1-A be drawn by player 0 ensures they will have the first turn
-          { id: '1-A', hasBeenPlaced: true, chain: Chain.Tower, drawnByPlayer: '0' },
-          { id: '2-A', hasBeenPlaced: true, chain: Chain.Tower },
-          { id: '3-A' },
+          { chain: Chain.Tower, drawnByPlayer: '0' },
+          { chain: Chain.Tower },
+          {},
         ],
-        [{ id: '1-B' }, { id: '2-B', drawnByPlayer: '0' }, { id: '3-B' }],
-        [
-          { id: '1-C', hasBeenPlaced: true, chain: Chain.Continental },
-          { id: '2-C', hasBeenPlaced: true, chain: Chain.Continental },
-          { id: '3-C' },
-        ],
-      ];
+        [{}, { drawnByPlayer: '0' }, {}],
+        [{ chain: Chain.Continental }, { chain: Chain.Continental }, {}],
+      ]);
 
       const MergersCustomScenario = {
         ...MergersGame,
@@ -1028,23 +1002,11 @@ describe('mergerPhase', () => {
       expect(p0.store.getState().ctx.activePlayers[0]).toEqual('buyStockStage');
 
       // absorbs hotels
-      const expectedBoard = [
-        [
-          { id: '1-A', hasBeenPlaced: true, chain: Chain.Continental, drawnByPlayer: '0' },
-          { id: '2-A', hasBeenPlaced: true, chain: Chain.Continental },
-          { id: '3-A' },
-        ],
-        [
-          { id: '1-B' },
-          { id: '2-B', drawnByPlayer: '0', hasBeenPlaced: true, chain: Chain.Continental },
-          { id: '3-B' },
-        ],
-        [
-          { id: '1-C', hasBeenPlaced: true, chain: Chain.Continental },
-          { id: '2-C', hasBeenPlaced: true, chain: Chain.Continental },
-          { id: '3-C' },
-        ],
-      ];
+      const expectedBoard = fillInTestHotels([
+        [{ chain: Chain.Continental, drawnByPlayer: '0' }, { chain: Chain.Continental }, {}],
+        [{}, { drawnByPlayer: '0', chain: Chain.Continental }, {}],
+        [{ chain: Chain.Continental }, { chain: Chain.Continental }, {}],
+      ]);
       expect(p0.store.getState().G.hotels).toEqual(expectedBoard);
     });
   });
