@@ -15,7 +15,7 @@ import {
   swapAndSellStock,
 } from './game';
 import { fillInTestHotels, getMultiplayerTestClients } from './test_utils';
-import { Chain, Hotel, IG, Player } from './types';
+import { Chain, Hotel, IG, Move, Player } from './types';
 import { fillStockMap, setupInitialState } from './utils';
 
 const DEFAULT_CTX: Ctx = {
@@ -174,7 +174,8 @@ describe('placeHotel', () => {
 
     placeHotel(G, ctx);
 
-    expect(G.lastMove).toEqual("Player 0 doesn't have any playable hotels");
+    expect(G.lastMove.move).toEqual(Move.PlaceNoHotel);
+    expect(G.lastMove.text).toEqual("Player 0 doesn't have any playable hotels");
     expect(ctx.events.endStage).toHaveBeenCalled();
   });
 });
@@ -228,6 +229,12 @@ describe('buyStock', () => {
     };
   });
 
+  it('sets the last move', () => {
+    buyStock(G, ctx, { [Chain.Toro]: 2, [Chain.Continuum]: 1 });
+    expect(G.lastMove.move).toEqual(Move.BuyStock);
+    expect(G.lastMove.text).toEqual('Player 0 buys 2 Toro for $400, 1 Continuum for $500');
+  });
+
   it('buys the right amount of stock for the right prices', () => {
     buyStock(G, ctx, { [Chain.Toro]: 2, [Chain.Continuum]: 1 });
 
@@ -249,6 +256,8 @@ describe('buyStock', () => {
     expect(G.availableStocks[Chain.Toro]).toEqual(2);
     expect(G.availableStocks[Chain.Continuum]).toEqual(25);
     expect(ctx.events.setStage).toHaveBeenCalledWith('drawHotelsStage');
+    expect(G.lastMove.move).toEqual(Move.BuyNoStock);
+    expect(G.lastMove.text).toEqual("Player 0 doesn't buy any stock");
   });
 
   it('does not buy more stocks than are available', () => {
@@ -334,6 +343,14 @@ describe('swapAndSellStock', () => {
       playerID: '0',
       events: { setStage: jest.fn() },
     };
+  });
+
+  it('sets the last move', () => {
+    // swaps 2, sells 3, keeps 5
+    swapAndSellStock(G, ctx, 2, 3);
+
+    expect(G.lastMove.move).toEqual(Move.ExchangeStock);
+    expect(G.lastMove.text).toEqual('Player 0 swaps 2 Toro for 1 Continuum, sells 3 Toro, keeps 5 Toro');
   });
 
   it('swaps and sells stock if available', () => {
@@ -436,6 +453,13 @@ describe('chooseNewChain', () => {
     };
   });
 
+  it('sets the last move', () => {
+    chooseNewChain(G, ctx, Chain.Amore);
+
+    expect(G.lastMove.move).toEqual(Move.ChooseNewChain);
+    expect(G.lastMove.text).toEqual('Player 0 chooses Amore as the new chain');
+  });
+
   it('should assign the chain to all hotels in the new chain', () => {
     chooseNewChain(G, ctx, Chain.Amore);
 
@@ -534,37 +558,43 @@ describe('awardBonuses', () => {
 });
 
 describe('chooseSurvivingChain', () => {
-  it('sets survivingChain and removes it from the mergingChains', () => {
-    const hotels = [
+  let hotels: Hotel[][];
+  let G: IG;
+  let ctx;
+
+  beforeEach(() => {
+    hotels = [
       [{ chain: Chain.Toro }, { chain: Chain.Toro }],
       [{ chain: Chain.Continuum }, { chain: undefined }],
       [{ chain: Chain.Continuum }, { chain: Chain.Amore }],
     ];
-    const G: IG = {
+    G = {
       merger: {
         mergingChains: [Chain.Toro, Chain.Continuum, Chain.Amore],
       },
       hotels,
     };
-    const result = chooseSurvivingChain(G, {}, Chain.Continuum);
+    ctx = { playerID: '0' };
+  });
+
+  it('sets the last move', () => {
+    chooseSurvivingChain(G, ctx, Chain.Continuum);
+
+    expect(G.lastMove.move).toEqual(Move.ChooseSurvivingChain);
+    expect(G.lastMove.text).toEqual('Player 0 chooses Continuum to survive the merger');
+  });
+
+  it('sets survivingChain and removes it from the mergingChains', () => {
+    const result = chooseSurvivingChain(G, ctx, Chain.Continuum);
+
     expect(G.merger.survivingChain).toEqual(Chain.Continuum);
     expect(G.merger.mergingChains).toEqual([Chain.Toro, Chain.Amore]);
     expect(result).not.toEqual(INVALID_MOVE);
   });
 
   it('only allows one of the largest chains to be selected', () => {
-    const hotels = [
-      [{ chain: Chain.Toro }, { chain: Chain.Toro }],
-      [{ chain: Chain.Continuum }, { chain: undefined }],
-      [{ chain: Chain.Continuum }, { chain: Chain.Amore }],
-    ];
-    const G: IG = {
-      merger: {
-        mergingChains: [Chain.Toro, Chain.Continuum, Chain.Amore],
-      },
-      hotels,
-    };
-    const result = chooseSurvivingChain(G, {}, Chain.Amore);
+    const result = chooseSurvivingChain(G, ctx, Chain.Amore);
+
     expect(result).toEqual(INVALID_MOVE);
   });
 });
@@ -584,10 +614,13 @@ describe('chooseChainToMerge', () => {
       },
       hotels,
     };
-    const result = chooseChainToMerge(G, {}, Chain.Continuum);
+    const ctx = { playerID: '0' };
+    const result = chooseChainToMerge(G, ctx, Chain.Continuum);
     expect(G.merger.chainToMerge).toEqual(Chain.Continuum);
     expect(G.merger.mergingChains).toEqual([Chain.Continuum, Chain.Festivus, Chain.Amore]);
     expect(result).not.toEqual(INVALID_MOVE);
+    expect(G.lastMove.move).toEqual(Move.ChooseChainToMerge);
+    expect(G.lastMove.text).toEqual('Player 0 chooses Continuum to merge next');
   });
 });
 
@@ -866,6 +899,13 @@ describe('declareGameOver', () => {
     };
   });
 
+  it('sets the last move', () => {
+    declareGameOver(G, ctx, true);
+
+    expect(G.lastMove.move).toEqual(Move.DeclareGameOver);
+    expect(G.lastMove.text).toEqual('Player 0 declares the game over');
+  });
+
   it('settles the remaining hotel chains', () => {
     declareGameOver(G, ctx, true);
 
@@ -917,6 +957,10 @@ describe('drawHotels', () => {
         '0': { id: '0' },
         '1': { id: '1' },
       },
+      lastMove: {
+        move: Move.BuyStock,
+        text: 'Previous last move text',
+      },
     };
     ctx = {
       ...DEFAULT_CTX,
@@ -927,6 +971,15 @@ describe('drawHotels', () => {
       },
       random: { Number: () => 0 },
     };
+  });
+
+  it('sets last move, but does not change the text', () => {
+    drawHotels(G, ctx);
+
+    expect(G.lastMove).toEqual({
+      move: Move.DrawHotels,
+      text: 'Previous last move text',
+    });
   });
 
   it('removes unplayable tiles, draws to 6, and ends the turn', () => {

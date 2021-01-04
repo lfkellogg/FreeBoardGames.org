@@ -1,6 +1,6 @@
 import { INVALID_MOVE } from 'boardgame.io/core';
 import { Game, Ctx } from 'boardgame.io';
-import { Chain, Hotel, Player, IG, Merger } from './types';
+import { Chain, Hotel, Player, IG, Merger, Move } from './types';
 import {
   playersInMajority,
   playersInMinority,
@@ -20,7 +20,10 @@ export function placeHotel(G: IG, ctx: Ctx, id?: string) {
     if (!!hotels.playerHotels(ctx.playerID).find((h) => !hotels.isUnplayable(h))) {
       return INVALID_MOVE;
     }
-    G.lastMove = `Player ${ctx.playerID} doesn't have any playable hotels`;
+    G.lastMove = {
+      move: Move.PlaceNoHotel,
+      text: `Player ${ctx.playerID} doesn't have any playable hotels`,
+    };
     ctx.events.endStage();
     return;
   }
@@ -31,6 +34,14 @@ export function placeHotel(G: IG, ctx: Ctx, id?: string) {
   }
   hotel.hasBeenPlaced = true;
   G.lastPlacedHotel = id;
+
+  G.lastMove = {
+    move: Move.PlaceHotel,
+    // While we're only showing one move at a time, we don't want to replace what was there with
+    // the hotel placement. Typically this would replace a stock buy, which is more important to
+    // leave up for folks to see. Also they can see what tile was played last by the star icon.
+    text: G.lastMove?.text,
+  };
 
   const adjacent = hotels.adjacentHotels(hotel);
 
@@ -81,7 +92,10 @@ export function chooseNewChain(G: IG, ctx: Ctx, chain: Chain) {
     G.availableStocks[chain]--;
     G.players[lastPlacedHotel.drawnByPlayer].stocks[chain]++;
   }
-  G.lastMove = `Player ${ctx.playerID} chooses ${chain} as the new chain`;
+  G.lastMove = {
+    move: Move.ChooseNewChain,
+    text: `Player ${ctx.playerID} chooses ${chain} as the new chain`,
+  };
   ctx.events.endStage();
 }
 
@@ -99,7 +113,7 @@ export function gameCanBeDeclaredOver(G: IG) {
 }
 
 export function buyStock(G: IG, ctx: Ctx, order: Partial<Record<Chain, number>>) {
-  G.lastMove = '';
+  let lastMoveText = '';
   if (order) {
     const hotels = getHotels(G);
     const player = G.players[ctx.playerID];
@@ -115,12 +129,12 @@ export function buyStock(G: IG, ctx: Ctx, order: Partial<Record<Chain, number>>)
         continue;
       }
       let stocksToBuy = Math.min(num, Math.min(G.availableStocks[chain], purchasesRemaining));
-      if (!G.lastMove) {
-        G.lastMove += `Player ${ctx.playerID} buys `;
+      if (!lastMoveText) {
+        lastMoveText += `Player ${ctx.playerID} buys `;
       } else {
-        G.lastMove += ', ';
+        lastMoveText += ', ';
       }
-      G.lastMove += `${stocksToBuy} ${chain} for $${stockPrice * stocksToBuy}`;
+      lastMoveText += `${stocksToBuy} ${chain} for $${stockPrice * stocksToBuy}`;
       while (stocksToBuy > 0 && player.money >= stockPrice) {
         player.stocks[chain]++;
         player.money -= stockPrice;
@@ -131,8 +145,16 @@ export function buyStock(G: IG, ctx: Ctx, order: Partial<Record<Chain, number>>)
     }
   }
 
-  if (!G.lastMove) {
-    G.lastMove = `Player ${ctx.playerID} doesn't buy any stock`;
+  if (!lastMoveText) {
+    G.lastMove = {
+      move: Move.BuyNoStock,
+      text: `Player ${ctx.playerID} doesn't buy any stock`,
+    };
+  } else {
+    G.lastMove = {
+      move: Move.BuyStock,
+      text: lastMoveText,
+    };
   }
 
   if (gameCanBeDeclaredOver(G)) {
@@ -158,6 +180,15 @@ export function drawHotels(G: IG, ctx: Ctx) {
   for (let i = 0; i < hotelsToDraw; i++) {
     assignRandomHotel(G, ctx, player);
   }
+
+  G.lastMove = {
+    move: Move.DrawHotels,
+    // While we're only showing one move at a time, we don't want to replace what was there with
+    // the hotel draw. Typically this would replace a stock buy, which is more important to
+    // leave up for folks to see.
+    text: G.lastMove?.text,
+  };
+
   ctx.events.endStage();
   ctx.events.endTurn();
 }
@@ -200,7 +231,10 @@ export function chooseSurvivingChain(G: IG, ctx, chain: Chain) {
   }
   G.merger.survivingChain = chain;
   G.merger.mergingChains.splice(G.merger.mergingChains.indexOf(chain), 1);
-  G.lastMove = `Player ${ctx.playerID} chooses ${chain} to survive the merger`;
+  G.lastMove = {
+    move: Move.ChooseSurvivingChain,
+    text: `Player ${ctx.playerID} chooses ${chain} to survive the merger`,
+  };
 }
 
 export function chooseChainToMerge(G: IG, ctx, chain: Chain) {
@@ -215,7 +249,10 @@ export function chooseChainToMerge(G: IG, ctx, chain: Chain) {
   // move the chain to the front of the array
   G.merger.mergingChains.splice(G.merger.mergingChains.indexOf(chain), 1);
   G.merger.mergingChains.unshift(chain);
-  G.lastMove = `Player ${ctx.playerID} chooses ${chain} to merge next`;
+  G.lastMove = {
+    move: Move.ChooseChainToMerge,
+    text: `Player ${ctx.playerID} chooses ${chain} to merge next`,
+  };
 }
 
 export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) {
@@ -223,10 +260,11 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
   const player = G.players[ctx.playerID];
   const originalStockCount = player.stocks[chainToMerge];
 
+  let lastMoveText;
   if (player.stocks[chainToMerge] === 0) {
-    G.lastMove = `Player ${ctx.playerID} has no ${chainToMerge} stock`;
+    lastMoveText = `Player ${ctx.playerID} has no ${chainToMerge} stock`;
   } else {
-    G.lastMove = '';
+    lastMoveText = '';
   }
 
   let toSwap = swap || 0;
@@ -236,7 +274,7 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
   toSwap = roundDownToNearest2(toSwap);
 
   if (toSwap > 0) {
-    G.lastMove = `Player ${ctx.playerID} swaps ${toSwap} ${chainToMerge} for ${toSwap / 2} ${survivingChain}`;
+    lastMoveText = `Player ${ctx.playerID} swaps ${toSwap} ${chainToMerge} for ${toSwap / 2} ${survivingChain}`;
   }
   // player gives away N stocks of the merged chan
   player.stocks[chainToMerge] -= toSwap;
@@ -252,12 +290,12 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
 
   // players sells stocks
   if (toSell > 0) {
-    if (G.lastMove) {
-      G.lastMove += ', ';
+    if (lastMoveText) {
+      lastMoveText += ', ';
     } else {
-      G.lastMove += `Player ${ctx.playerID} `;
+      lastMoveText += `Player ${ctx.playerID} `;
     }
-    G.lastMove += `sells ${toSell} ${chainToMerge}`;
+    lastMoveText += `sells ${toSell} ${chainToMerge}`;
   }
 
   player.stocks[chainToMerge] -= toSell;
@@ -266,18 +304,27 @@ export function swapAndSellStock(G: IG, ctx: Ctx, swap?: number, sell?: number) 
   G.merger.swapAndSells[player.id] = { swap: toSwap, sell: toSell };
 
   if (originalStockCount > 0 && player.stocks[chainToMerge] > 0) {
-    if (!G.lastMove) {
-      G.lastMove += `Player ${ctx.playerID} `;
+    if (!lastMoveText) {
+      lastMoveText += `Player ${ctx.playerID} `;
     } else {
-      G.lastMove += ', ';
+      lastMoveText += ', ';
     }
-    G.lastMove += `keeps ${player.stocks[chainToMerge]} ${chainToMerge}`;
+    lastMoveText += `keeps ${player.stocks[chainToMerge]} ${chainToMerge}`;
   }
+
+  G.lastMove = {
+    move: toSwap + toSell === 0 ? Move.ExchangeNoStock : Move.ExchangeStock,
+    text: lastMoveText,
+  };
 }
 
 export function declareGameOver(G: IG, ctx: Ctx, isGameOver: boolean) {
   if (isGameOver) {
-    G.lastMove = `Player ${ctx.playerID} declares the game over`;
+    G.lastMove = {
+      move: Move.DeclareGameOver,
+      text: `Player ${ctx.playerID} declares the game over`,
+    };
+
     // award bonuses for remaining chains
     const hotels = getHotels(G);
     const chains = new Set<Chain>(
@@ -392,7 +439,11 @@ export function setupInitialDrawing(G: IG, ctx: Ctx) {
   }
 
   const topLeftMostHotel = hotels.topLeftMostHotel();
-  G.lastMove = `Player ${topLeftMostHotel.drawnByPlayer} draws ${topLeftMostHotel.id} and will go first`;
+
+  G.lastMove = {
+    move: Move.OpeningDraw,
+    text: `Opening tiles are randomly drawn and played. Player ${topLeftMostHotel.drawnByPlayer} draws ${topLeftMostHotel.id} and will go first`,
+  };
 }
 
 export function autosetChainToMerge(G: IG) {

@@ -8,7 +8,6 @@ export function setupInitialState(numPlayers: number): IG {
     hotels: Hotels.buildGrid(),
     players: setupPlayers(numPlayers),
     availableStocks: fillStockMap(STOCK_PER_CHAIN),
-    lastMove: '',
   };
 }
 

@@ -3,7 +3,7 @@ import Button from '@material-ui/core/Button';
 
 import css from '../Board.module.css';
 import { StockLabel } from './StockLabel';
-import { Chain, Player } from '../types';
+import { Chain, LastMove, Player } from '../types';
 import { Hotels } from '../hotels';
 import { MergersDialog } from './MergersDialog';
 import { StockGuide } from './StockGuide';
@@ -13,7 +13,7 @@ export interface MergersGameStatusProps {
   hotels: Hotels;
   player: Player;
   availableStocks: Record<Chain, number>;
-  lastMove?: string;
+  lastMove?: LastMove;
   currentPlayer: string;
   players?: IPlayerInRoom[];
   children: React.ReactNode;
@@ -110,7 +110,7 @@ export class MergersGameStatus extends React.Component<MergersGameStatusProps, M
 
   renderLastMove() {
     let message: string;
-    message = this.props.lastMove || '';
+    message = this.props.lastMove?.text || '';
     for (const p of this.props.players || []) {
       message = message.replace(new RegExp(`Player ${p.playerID}`, 'g'), p.name);
     }

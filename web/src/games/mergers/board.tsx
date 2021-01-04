@@ -6,13 +6,15 @@ import { Ctx } from 'boardgame.io';
 
 import css from './Board.module.css';
 import { HotelGrid } from './components/HotelGrid';
-import { IG, Merger, Score } from './types';
+import { IG, Merger, Move, Score } from './types';
 import { PlayerActions } from './components/PlayerActions';
 import { MergerDetails } from './components/MergerDetails';
 import { MergersDialog } from './components/MergersDialog';
 import { Hotels } from './hotels';
+import { MergersSound, playSound, repeatSound } from './sound';
 import { MergersGameStatus } from './components/MergersGameStatus';
 import { createMuiTheme, ThemeProvider } from '@material-ui/core';
+import { IOptionsItems } from 'gamesShared/components/fbg/GameDarkSublayout';
 
 export interface BoardProps {
   G: IG;
@@ -23,13 +25,14 @@ export interface BoardProps {
 }
 
 export interface BoardState {
+  openingDrawSoundPlayed: boolean;
   mergerDetailsDismissed: boolean;
   gameOverDetailsDismissed: boolean;
+  soundEnabled: boolean;
 }
 
 // TODOs:
 //  - animations
-//  - sounds
 //  - add validation to swap/sell stock
 //  - highlight players with stock during a merger
 //  - countdown at the end
@@ -37,15 +40,98 @@ export class Board extends React.Component<BoardProps, BoardState> {
   constructor(props) {
     super(props);
     this.state = {
+      openingDrawSoundPlayed: false,
       mergerDetailsDismissed: false,
       gameOverDetailsDismissed: false,
+      soundEnabled: true,
     };
+  }
+
+  componentDidMount() {
+    // When mounting, if the opening draw just happened (which it normally will), then force the
+    // sound to play
+    if (this.props.G.lastMove?.move === Move.OpeningDraw && !this.state.openingDrawSoundPlayed) {
+      this.setState({ openingDrawSoundPlayed: true });
+      this.playSounds(this.props, true);
+    }
   }
 
   componentDidUpdate(prevProps) {
     if (this.props.G.merger?.chainToMerge !== prevProps.G.merger?.chainToMerge) {
       // reset the merger dialog dismissed state
       this.setState({ mergerDetailsDismissed: false });
+    }
+    this.playSounds(prevProps);
+  }
+
+  getOptionsMenuItems(): IOptionsItems[] {
+    return [
+      {
+        onClick: () => this.setState((state) => ({ soundEnabled: !state.soundEnabled })),
+        text: `${this.state.soundEnabled ? 'Disable' : 'Enable'} sound`,
+      },
+    ];
+  }
+
+  playSounds(prevProps: BoardProps, forceMoveSound?: boolean): void {
+    if (!this.state.soundEnabled) {
+      return;
+    }
+
+    // new merger sound
+    const chainToMerge = this.props.G.merger?.chainToMerge;
+    const prevChainToMerge = prevProps.G.merger?.chainToMerge;
+    if (!!chainToMerge && chainToMerge !== prevChainToMerge) {
+      playSound(MergersSound.Tada);
+      return;
+    }
+
+    // game over sound
+    const gameOver = this.props.ctx.gameover;
+    const prevGameOver = prevProps.ctx.gameover;
+    if (!!gameOver && !prevGameOver) {
+      playSound(MergersSound.Tada);
+      return;
+    }
+
+    // your turn sound
+    const currentPlayer = this.props.ctx.currentPlayer;
+    const prevCurrentPlayer = prevProps.ctx.currentPlayer;
+    const yourTurn = currentPlayer === this.props.playerID;
+    const playerChanged = currentPlayer !== prevCurrentPlayer;
+    if (!!yourTurn && playerChanged) {
+      playSound(MergersSound.Chime);
+    }
+
+    // moves
+    const lastMove = this.props.G.lastMove?.move;
+    const prevLastMove = prevProps.G.lastMove?.move;
+    const moveChanged = lastMove !== prevLastMove;
+    if (!!lastMove && (moveChanged || playerChanged || forceMoveSound)) {
+      switch (lastMove) {
+        case Move.PlaceHotel:
+        case Move.ChooseNewChain:
+          playSound(MergersSound.Click);
+          return;
+        case Move.BuyStock:
+        case Move.ExchangeStock:
+          playSound(MergersSound.Card);
+          return;
+        case Move.OpeningDraw:
+          const numPlayers = this.props.gameArgs?.players?.length || 0;
+          repeatSound(MergersSound.Click, numPlayers);
+          return;
+        case Move.DrawHotels:
+          playSound(MergersSound.Tiles);
+          return;
+        case Move.PlaceNoHotel:
+        case Move.BuyNoStock:
+        case Move.ExchangeNoStock:
+          playSound(MergersSound.Whoosh);
+          return;
+        default:
+          break;
+      }
     }
   }
 
@@ -175,7 +261,11 @@ export class Board extends React.Component<BoardProps, BoardState> {
   render() {
     const hotels = new Hotels(this.props.G.hotels);
     return (
-      <GameLayout allowWiderScreen={true} gameArgs={this.props.gameArgs}>
+      <GameLayout
+        optionsMenuItems={() => this.getOptionsMenuItems()}
+        allowWiderScreen={true}
+        gameArgs={this.props.gameArgs}
+      >
         <ThemeProvider theme={createMuiTheme({ palette: { type: 'dark' } })}>
           <MergersGameStatus
             hotels={hotels}

@@ -4,8 +4,28 @@ export interface IG {
   players?: Record<string, Player>;
   availableStocks?: Record<Chain, number>;
   lastPlacedHotel?: string;
-  lastMove?: string;
+  lastMove?: LastMove;
   merger?: Merger;
+}
+
+export interface LastMove {
+  move: Move;
+  text: string;
+}
+
+export enum Move {
+  OpeningDraw = 'OpeningDraw',
+  PlaceHotel = 'PlaceHotel',
+  PlaceNoHotel = 'PlaceNoHotel',
+  ChooseNewChain = 'ChooseNewChain',
+  ChooseSurvivingChain = 'ChooseSurvivingChain',
+  ChooseChainToMerge = 'ChooseChainToMerge',
+  BuyStock = 'BuyStock',
+  BuyNoStock = 'BuyNoStock',
+  DrawHotels = 'DrawHotels',
+  ExchangeStock = 'ExchangeStock',
+  ExchangeNoStock = 'ExchangeNoStock',
+  DeclareGameOver = 'DeclareGameOver',
 }
 
 export enum Chain {
